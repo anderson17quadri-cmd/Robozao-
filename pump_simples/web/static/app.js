@@ -160,6 +160,32 @@
     // rodapé "trade máx" ao vivo (reflete o valor guardado, não o do .env)
     const ft = $("footTrade");
     if (ft && state.max_trade_usd !== undefined) ft.textContent = SIM + Number(state.max_trade_usd).toFixed(0);
+
+    // filtros editáveis — não sobrescreve enquanto escreves
+    setInputSeNaoFocado("liqInput", state.liquidez_minima_usd);
+    setInputSeNaoFocado("mcapInput", state.marketcap_minimo_usd);
+  }
+
+  function setInputSeNaoFocado(id, valor) {
+    const el = $(id);
+    if (el && document.activeElement !== el && valor !== undefined && valor !== null) {
+      el.value = valor;
+    }
+  }
+
+  async function salvarConfig(campo, valorRaw, btnId) {
+    const v = String(valorRaw).trim().replace(",", ".");
+    const n = Number(v);
+    if (v === "" || isNaN(n) || n < 0) return;
+    const btn = btnId ? $(btnId) : null;
+    try {
+      const r = await fetch("/api/config", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [campo]: v }),
+      });
+      if (btn) { btn.textContent = r.ok ? "✓" : "erro"; setTimeout(() => { btn.textContent = "ok"; }, 1200); }
+      await poll();
+    } catch (e) { if (btn) btn.textContent = "erro"; }
   }
 
   async function poll() {
@@ -262,6 +288,17 @@
   $("tradeSave").addEventListener("click", salvarValorEntrada);
   // grava também ao sair do campo (não precisas de carregar no "ok")
   $("tradeInput").addEventListener("change", salvarValorEntrada);
+
+  // filtros: liquidez mínima e market cap mínimo
+  const bindFiltro = (inputId, campo, btnId) => {
+    const save = () => salvarConfig(campo, $(inputId).value, btnId);
+    $(btnId).addEventListener("click", save);
+    $(inputId).addEventListener("change", save);
+    $(inputId).addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+  };
+  bindFiltro("liqInput", "liquidez_minima_usd", "liqSave");
+  bindFiltro("mcapInput", "marketcap_minimo_usd", "mcapSave");
+
   $("tradeInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") salvarValorEntrada();
   });

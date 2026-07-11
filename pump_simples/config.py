@@ -73,7 +73,9 @@ class Config:
     bitquery_api_key: str = ""               # só para fonte="bitquery" (grátis em bitquery.io)
 
     # --- Regras de entrada ---
-    liquidez_minima_usd: float = 1000.0
+    # subido de 1000 -> 10000: os dados mostraram que tokens com ~$5k de liquidez
+    # rugam (enchem a -99%); os que sobem tinham ~$31k. Editável no dashboard.
+    liquidez_minima_usd: float = 10000.0
     marketcap_minimo_usd: float = 10000.0     # 0 = desligado (mcap ≈ preço * 1e9)
 
     # --- Regras de saída ---
@@ -152,7 +154,7 @@ def load_config() -> Config:
         solana_rpc_url=_get("SOLANA_RPC_URL", ""),
         fonte_deteccao=fonte,
         bitquery_api_key=_get("BITQUERY_API_KEY", ""),
-        liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 1000.0),
+        liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 10000.0),
         marketcap_minimo_usd=_get_float("MARKETCAP_MINIMO_USD", 10000.0),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 0.0),
         trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),

@@ -57,11 +57,23 @@
 
   <div class="configbar">
     <p class="statusline" id="statusLine">bot parado</p>
-    <div class="cfg-edit">
-      <label>valor por entrada</label>
-      <span class="cfg-cur" id="cfgCur">€</span>
-      <input type="number" id="tradeInput" class="cfg-input" step="0.5" min="0" placeholder="2">
-      <button id="tradeSave" class="btn-mini">ok</button>
+    <div class="cfg-group">
+      <div class="cfg-edit">
+        <label>valor entrada</label>
+        <span class="cfg-cur" id="cfgCur">€</span>
+        <input type="number" id="tradeInput" class="cfg-input" step="0.5" min="0" placeholder="2">
+        <button id="tradeSave" class="btn-mini">ok</button>
+      </div>
+      <div class="cfg-edit">
+        <label>liquidez mín $</label>
+        <input type="number" id="liqInput" class="cfg-input" step="1000" min="0" placeholder="10000">
+        <button id="liqSave" class="btn-mini">ok</button>
+      </div>
+      <div class="cfg-edit">
+        <label>market cap mín $</label>
+        <input type="number" id="mcapInput" class="cfg-input" step="1000" min="0" placeholder="10000">
+        <button id="mcapSave" class="btn-mini">ok</button>
+      </div>
     </div>
   </div>
 

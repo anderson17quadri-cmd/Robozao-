@@ -22,8 +22,10 @@ class AppState:
         self.bot_running: bool = False
         self.ultimo_scan: float = 0.0
         self.ultima_msg: str = "parado"
-        # valor de cada entrada (editável no dashboard; começa no do .env)
+        # parâmetros editáveis no dashboard (começam nos valores do .env)
         self.max_trade_usd: float = CFG.max_trade_usd
+        self.liquidez_minima_usd: float = CFG.liquidez_minima_usd
+        self.marketcap_minimo_usd: float = CFG.marketcap_minimo_usd
         self._load()
 
     # ---------- persistência ----------
@@ -35,6 +37,8 @@ class AppState:
             self.posicoes = data.get("posicoes", [])
             self.historico = data.get("historico", [])
             self.max_trade_usd = data.get("max_trade_usd", self.max_trade_usd)
+            self.liquidez_minima_usd = data.get("liquidez_minima_usd", self.liquidez_minima_usd)
+            self.marketcap_minimo_usd = data.get("marketcap_minimo_usd", self.marketcap_minimo_usd)
         except FileNotFoundError:
             pass
         except Exception as exc:
@@ -47,6 +51,8 @@ class AppState:
                 "posicoes": self.posicoes,
                 "historico": self.historico,
                 "max_trade_usd": self.max_trade_usd,
+                "liquidez_minima_usd": self.liquidez_minima_usd,
+                "marketcap_minimo_usd": self.marketcap_minimo_usd,
                 "atualizado_em": time.time(),
             }
             tmp = CFG.state_file + ".tmp"
@@ -178,18 +184,43 @@ class AppState:
             self.historico = []
             self._save_locked()
 
-    def set_max_trade(self, valor) -> bool:
-        """Define o valor de cada entrada (persiste). Devolve False se inválido."""
+    @staticmethod
+    def _to_float(valor, permite_zero=False):
         try:
             if isinstance(valor, str):
                 valor = valor.strip().replace(",", ".")  # aceita vírgula decimal
             v = float(valor)
         except (TypeError, ValueError):
-            return False
-        if v <= 0:
+            return None
+        if v < 0 or (v == 0 and not permite_zero):
+            return None
+        return v
+
+    def set_max_trade(self, valor) -> bool:
+        """Define o valor de cada entrada (persiste). Devolve False se inválido."""
+        v = self._to_float(valor)
+        if v is None:
             return False
         with self._lock:
             self.max_trade_usd = v
+            self._save_locked()
+            return True
+
+    def set_liquidez_minima(self, valor) -> bool:
+        v = self._to_float(valor, permite_zero=True)
+        if v is None:
+            return False
+        with self._lock:
+            self.liquidez_minima_usd = v
+            self._save_locked()
+            return True
+
+    def set_marketcap_minimo(self, valor) -> bool:
+        v = self._to_float(valor, permite_zero=True)   # 0 = filtro desligado
+        if v is None:
+            return False
+        with self._lock:
+            self.marketcap_minimo_usd = v
             self._save_locked()
             return True
 
@@ -204,6 +235,8 @@ class AppState:
                 "investido_usd": round(investido, 4),
                 "valor_total_usd": round(self.saldo_usd + investido + pl_aberto, 4),
                 "max_trade_usd": round(self.max_trade_usd, 4),
+                "liquidez_minima_usd": round(self.liquidez_minima_usd, 2),
+                "marketcap_minimo_usd": round(self.marketcap_minimo_usd, 2),
                 "pl_aberto_usd": round(pl_aberto, 4),
                 "pl_realizado_usd": round(realizado, 4),
                 "posicoes": [dict(p) for p in self.posicoes],

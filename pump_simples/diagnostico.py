@@ -200,7 +200,60 @@ def main():
     # ---------- 7) ARREPENDIMENTO: subiu depois de vender? ----------
     _analise_arrependimento(estado)
 
+    # ---------- 8) DESEMPENHO POR LIQUIDEZ À COMPRA ----------
+    _analise_por_liquidez(compras, vendas)
+
     print("\n" + "=" * 62)
+
+
+def _analise_por_liquidez(compras: list[dict], vendas: list[dict]):
+    """Junta compra(liquidez) + venda(resultado) e mostra win-rate/P&L por faixa de
+    liquidez — responde direto a 'a partir de que liquidez os tokens são bons?'."""
+    print("\n" + "-" * 62)
+    print("8) DESEMPENHO POR LIQUIDEZ À COMPRA")
+
+    compra_por_id = {c.get("pos_id"): c for c in compras if c.get("pos_id")}
+    trades = []
+    for v in vendas:
+        c = compra_por_id.get(v.get("pos_id"))
+        if not c:
+            continue
+        liq = c.get("liquidez_usd")
+        if liq is None:
+            continue
+        trades.append({"liq": float(liq), "pl_usd": v.get("pl_usd") or 0.0,
+                       "pl_pct": v.get("pl_pct") or 0.0})
+
+    if not trades:
+        print("   sem liquidez registada nas compras ainda (só a partir da versão")
+        print("   que a começou a gravar). Corre um novo período.")
+        return
+
+    faixas = [(0, 2000, "< $2k"), (2000, 5000, "$2k–5k"), (5000, 10000, "$5k–10k"),
+              (10000, 20000, "$10k–20k"), (20000, 50000, "$20k–50k"),
+              (50000, float("inf"), "> $50k")]
+    print(f"   {'faixa':10} {'n':>4} {'win%':>6} {'P/L soma':>12} {'P/L med %':>10}")
+    for lo, hi, rot in faixas:
+        grupo = [t for t in trades if lo <= t["liq"] < hi]
+        if not grupo:
+            continue
+        n = len(grupo)
+        wins = sum(1 for t in grupo if t["pl_usd"] > 0)
+        soma = sum(t["pl_usd"] for t in grupo)
+        medpct = _mediana([t["pl_pct"] for t in grupo]) or 0.0
+        print(f"   {rot:10} {n:>4} {wins/n*100:>5.0f}% {_eur(soma):>12} {medpct:>+9.1f}%")
+
+    # corte sugerido: primeira faixa (>=) com P/L soma positivo e win-rate decente
+    print("   -----")
+    acima = {}
+    for corte in (5000, 10000, 20000, 50000):
+        g = [t for t in trades if t["liq"] >= corte]
+        if g:
+            acima[corte] = (len(g), sum(1 for t in g if t["pl_usd"] > 0) / len(g) * 100,
+                            sum(t["pl_usd"] for t in g))
+    for corte, (n, wr, soma) in acima.items():
+        print(f"   se só comprasses liquidez ≥ ${corte:,}: {n} trades | "
+              f"win {wr:.0f}% | P/L {_eur(soma)}")
 
 
 def _mediana(valores):

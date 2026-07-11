@@ -57,11 +57,11 @@ def avaliar_e_comprar(pool: dict) -> None:
     if CFG.max_posicoes_abertas > 0 and len(STATE.posicoes) >= CFG.max_posicoes_abertas:
         return
 
-    # --- Regra 3: liquidez mínima (barata, verifica primeiro) ---
-    if liquidez < CFG.liquidez_minima_usd:
+    # --- Regra 3: liquidez mínima (barata, verifica primeiro) --- (editável no dashboard)
+    if liquidez < STATE.liquidez_minima_usd:
         log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                   motivo="liquidez_baixa", liquidez_usd=liquidez,
-                  minimo=CFG.liquidez_minima_usd)
+                  minimo=STATE.liquidez_minima_usd)
         return
 
     if not preco or preco <= 0:
@@ -73,12 +73,12 @@ def avaliar_e_comprar(pool: dict) -> None:
     # pump.fun tem ~1e9 de supply => market cap ≈ preço * 1e9.
     # Os dados mostraram que tokens comprados a mcap baixo (~$3k) rugam;
     # os que sobem entraram a ~$20k. Este filtro corta os "cedo demais".
-    if CFG.marketcap_minimo_usd > 0:
+    if STATE.marketcap_minimo_usd > 0:
         marketcap = preco * PUMP_SUPPLY_ESTIMADO
-        if marketcap < CFG.marketcap_minimo_usd:
+        if marketcap < STATE.marketcap_minimo_usd:
             log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                       motivo="marketcap_baixo", marketcap_usd=marketcap,
-                      minimo=CFG.marketcap_minimo_usd, preco=preco)
+                      minimo=STATE.marketcap_minimo_usd, preco=preco)
             return
 
     # --- Regra 2: autoridades revogadas (fail-closed) ---

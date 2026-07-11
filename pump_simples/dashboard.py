@@ -109,14 +109,23 @@ def api_vender(pos_id):
 
 @app.route("/api/config", methods=["POST"])
 def api_config():
-    """Ajusta o valor de cada entrada (max_trade_usd) em runtime, e persiste."""
+    """Ajusta parâmetros editáveis em runtime (persistem): valor de entrada,
+    liquidez mínima e market cap mínimo."""
     body = request.get_json(silent=True) or {}
-    if "max_trade_usd" in body:
-        ok = STATE.set_max_trade(body.get("max_trade_usd"))
-        if not ok:
-            return jsonify({"ok": False, "motivo": "valor inválido (tem de ser > 0)"}), 400
-        return jsonify({"ok": True, "max_trade_usd": STATE.max_trade_usd})
-    return jsonify({"ok": False, "motivo": "nada para atualizar"}), 400
+    campos = {
+        "max_trade_usd": STATE.set_max_trade,
+        "liquidez_minima_usd": STATE.set_liquidez_minima,
+        "marketcap_minimo_usd": STATE.set_marketcap_minimo,
+    }
+    atualizados = {}
+    for campo, setter in campos.items():
+        if campo in body:
+            if not setter(body.get(campo)):
+                return jsonify({"ok": False, "motivo": f"valor inválido para {campo}"}), 400
+            atualizados[campo] = getattr(STATE, campo)
+    if not atualizados:
+        return jsonify({"ok": False, "motivo": "nada para atualizar"}), 400
+    return jsonify({"ok": True, **atualizados})
 
 
 @app.route("/api/reset", methods=["POST"])
