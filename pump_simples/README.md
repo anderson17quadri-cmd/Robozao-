@@ -87,7 +87,14 @@ DRY_RUN.
 
 ## Correr
 
-**Dashboard (recomendado)** — corre o bot numa thread e dá-te o toggle:
+**Arranque rápido (sem configurar nada)** — cria o `.env` para DRY_RUN, instala
+o que falta e arranca. Ideal para o Termux:
+```bash
+bash start_dryrun.sh
+# abre http://localhost:5000  e carrega em "LIGAR BOT"
+```
+
+**Dashboard (manual)** — corre o bot numa thread e dá-te o toggle:
 ```bash
 python dashboard.py
 # abre http://localhost:5000  e carrega em "LIGAR BOT"
