@@ -51,7 +51,10 @@
   function posicaoCard(p) {
     const cls = signClass(p.pl_pct);
     const meta = (p.meta_lucro_pct !== null && p.meta_lucro_pct !== undefined) ? p.meta_lucro_pct : "";
-    const alvo = meta !== "" ? meta : MODO.take_profit_pct;
+    const alvoNum = meta !== "" ? Number(meta) : Number(MODO.take_profit_pct || 0);
+    const alvoTxt = alvoNum > 0
+      ? `meta: +${alvoNum.toFixed(0)}%`
+      : `só trailing −${Number(MODO.trailing_stop_pct || 30).toFixed(0)}% do pico`;
     return `
       <div class="card ${cls}" data-id="${p.id}">
         <div>
@@ -71,7 +74,7 @@
             <input type="number" class="meta-input" value="${meta}"
                    placeholder="${MODO.take_profit_pct}" step="1" min="0">
             <button class="btn-mini btn-save" data-act="meta" data-id="${p.id}">ok</button>
-            <span class="meta-hint">alvo atual: +${Number(alvo).toFixed(0)}%</span>
+            <span class="meta-hint">${alvoTxt}</span>
           </div>
           <button class="btn-sell" data-act="sell" data-id="${p.id}"
                   data-name="${escapeHtml(p.name || "?")}">Vender 100%</button>

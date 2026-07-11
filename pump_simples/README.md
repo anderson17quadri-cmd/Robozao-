@@ -22,12 +22,14 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 3. Liquidez ≥ `LIQUIDEZ_MINIMA_USD` (default $1000).
 
 ### Regras de saída (o que disparar primeiro, vence)
-- **Take-profit:** vende tudo a `+TAKE_PROFIT_PCT%` (default +50%).
-- **Trailing stop:** vende tudo se cair `TRAILING_STOP_PCT%` (default 30%) desde o
-  **pico** mais alto atingido (não desde a compra). O pico só sobe. Substitui o
-  stop-loss fixo — quando o token nunca sobe acima da entrada, age como um
-  stop-loss normal. `STOP_LOSS_PCT` ficou **legado** (já não é usado).
-- **Timeout:** vende tudo passados `TIMEOUT_MINUTOS` (default 10 min).
+- **Trailing stop (saída principal):** deixa o **pico** correr (só sobe) e vende
+  tudo se cair `TRAILING_STOP_PCT%` (default 30%) desde esse pico — não desde a
+  compra. Quando o token nunca sobe acima da entrada, age como stop-loss.
+- **Take-profit:** **desligado por default** (`TAKE_PROFIT_PCT=0`) — não há teto
+  de lucro; o pico corre livre e o trailing gere a subida. Podes definir uma meta
+  por posição no dashboard, ou pôr um `TAKE_PROFIT_PCT` global se quiseres um teto.
+- **Timeout:** vende tudo passados `TIMEOUT_MINUTOS` (default 10 min; `0` = sem timeout).
+- `STOP_LOSS_PCT` ficou **legado** (substituído pelo trailing).
 - Verificação a cada `INTERVALO_VERIFICACAO_SEGUNDOS` (default 5s).
 
 ### Slippage simulado (só DRY_RUN)

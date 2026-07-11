@@ -88,9 +88,9 @@
   </main>
 
   <footer class="rules">
-    <span>TP <b class="up">+{{ '%.0f'|format(modo.take_profit_pct) }}%</b></span>
+    {% if modo.take_profit_pct and modo.take_profit_pct > 0 %}<span>TP <b class="up">+{{ '%.0f'|format(modo.take_profit_pct) }}%</b></span>{% else %}<span>TP <b>sem meta</b> (só trailing)</span>{% endif %}
     <span>trailing <b class="down">−{{ '%.0f'|format(modo.trailing_stop_pct) }}%</b> do pico</span>
-    <span>timeout <b>{{ '%.0f'|format(modo.timeout_minutos) }}min</b></span>
+    {% if modo.timeout_minutos and modo.timeout_minutos > 0 %}<span>timeout <b>{{ '%.0f'|format(modo.timeout_minutos) }}min</b></span>{% else %}<span>timeout <b>off</b></span>{% endif %}
     <span>trade máx <b>{{ modo.moeda_simbolo }}{{ '%.0f'|format(modo.max_trade_usd) }}</b></span>
     <span>mcap mín <b>${{ '%.0f'|format(modo.marketcap_minimo_usd) }}</b></span>
     {% if modo.slippage_simulado_pct %}<span>slippage sim <b>{{ '%.0f'|format(modo.slippage_simulado_pct) }}%</b></span>{% endif %}

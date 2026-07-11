@@ -160,7 +160,9 @@ def verificar_posicoes() -> None:
         pl_pct = (preco / pos["entry_price"] - 1.0) * 100.0 if pos["entry_price"] else 0.0
         idade_min = (time.time() - pos["opened_at"]) / 60.0
 
-        # meta de lucro: usa a custom da posição se definida, senão o global do .env
+        # meta de lucro (take-profit): OPCIONAL. Usa a custom da posição se definida,
+        # senão o global do .env. Se ambos forem 0, NÃO há meta para cima — o pico
+        # corre livremente e só o trailing gere a subida.
         meta = pos.get("meta_lucro_pct")
         alvo_tp = meta if (meta is not None and meta > 0) else CFG.take_profit_pct
 
@@ -170,11 +172,11 @@ def verificar_posicoes() -> None:
         gatilho_trailing = pico * (1.0 - CFG.trailing_stop_pct / 100.0) if pico else 0.0
 
         motivo = None
-        if pl_pct >= alvo_tp:
+        if alvo_tp and alvo_tp > 0 and pl_pct >= alvo_tp:
             motivo = "take_profit"
         elif gatilho_trailing and preco <= gatilho_trailing:
             motivo = "trailing_stop"
-        elif idade_min >= CFG.timeout_minutos:
+        elif CFG.timeout_minutos and CFG.timeout_minutos > 0 and idade_min >= CFG.timeout_minutos:
             motivo = "timeout"
 
         if motivo:

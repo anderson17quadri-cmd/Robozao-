@@ -77,12 +77,14 @@ class Config:
     marketcap_minimo_usd: float = 10000.0     # 0 = desligado (mcap ≈ preço * 1e9)
 
     # --- Regras de saída ---
-    take_profit_pct: float = 50.0
+    # take-profit fixo. 0 = SEM meta para cima (deixa o pico correr; só o trailing
+    # gere a subida). Podes ainda definir uma meta por posição no dashboard.
+    take_profit_pct: float = 0.0
     # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO (não desde a compra).
     # Substitui o stop-loss fixo — quando o pico ≈ entrada, comporta-se como um stop normal.
     trailing_stop_pct: float = 30.0
     stop_loss_pct: float = 25.0   # LEGADO: já não é usado (substituído pelo trailing)
-    timeout_minutos: float = 10.0
+    timeout_minutos: float = 10.0   # 0 = SEM timeout (só sai pelo trailing)
     intervalo_verificacao_segundos: int = 5   # verifica posições mais depressa (era 15)
 
     # --- Tamanho / saldos --- (o saldo é uma unidade virtual; símbolo configurável)
@@ -149,7 +151,7 @@ def load_config() -> Config:
         bitquery_api_key=_get("BITQUERY_API_KEY", ""),
         liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 1000.0),
         marketcap_minimo_usd=_get_float("MARKETCAP_MINIMO_USD", 10000.0),
-        take_profit_pct=_get_float("TAKE_PROFIT_PCT", 50.0),
+        take_profit_pct=_get_float("TAKE_PROFIT_PCT", 0.0),
         trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
