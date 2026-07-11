@@ -117,6 +117,48 @@ def get_pool_price(pool_address: str) -> float | None:
     return _f(attrs.get("base_token_price_usd"))
 
 
+def verificar_pool(pool_address: str, mint_esperado: str = "") -> dict:
+    """
+    Confirma que um pool_address é REAL na GeckoTerminal (não inventado/corrompido)
+    e, se `mint_esperado` for dado, que o mint do pool bate certo com o que temos
+    guardado. Usado para auditar se as posições do bot são tokens genuínos.
+
+    Devolve:
+        {"existe": bool, "motivo": str, "name": str, "price_usd": float|None,
+         "liquidity_usd": float, "dex": str, "mint_no_gecko": str,
+         "mint_confere": bool|None}
+    """
+    resultado = {"existe": False, "motivo": "", "name": "?", "price_usd": None,
+                 "liquidity_usd": 0.0, "dex": "", "mint_no_gecko": "", "mint_confere": None}
+    if not pool_address:
+        resultado["motivo"] = "pool_address vazio"
+        return resultado
+
+    data = _get_json(f"{CFG.gecko_api_base}/networks/solana/pools/{pool_address}")
+    if not data or "data" not in data:
+        resultado["motivo"] = "pool NÃO encontrado na GeckoTerminal (endereço inválido/inexistente?)"
+        return resultado
+
+    attrs = (data.get("data", {}) or {}).get("attributes", {}) or {}
+    rel = (data.get("data", {}) or {}).get("relationships", {}) or {}
+    base = (rel.get("base_token", {}) or {}).get("data", {}) or {}
+    base_id = base.get("id", "")
+    mint_gecko = base_id.split("_", 1)[1] if "_" in base_id else base_id
+
+    resultado.update({
+        "existe": True,
+        "motivo": "pool confirmado na GeckoTerminal",
+        "name": attrs.get("name", "?"),
+        "price_usd": _f(attrs.get("base_token_price_usd")),
+        "liquidity_usd": _f(attrs.get("reserve_in_usd")) or 0.0,
+        "dex": ((rel.get("dex", {}) or {}).get("data", {}) or {}).get("id", ""),
+        "mint_no_gecko": mint_gecko,
+    })
+    if mint_esperado:
+        resultado["mint_confere"] = (mint_gecko == mint_esperado)
+    return resultado
+
+
 def get_pool_info(pool_address: str) -> dict | None:
     """
     Info atual e completa de um pool (preço, liquidez, hype) numa só chamada.
