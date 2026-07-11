@@ -65,7 +65,8 @@ class AppState:
 
     # ---------- operações ----------
     def abrir_posicao(self, *, mint, pool_address, name, entry_price,
-                      amount_usd, tokens, meta_lucro_pct=None, liquidez_usd=None) -> dict:
+                      amount_usd, tokens, meta_lucro_pct=None, liquidez_usd=None,
+                      buyers_h1=None, volume_h1=None, txns_h1=None) -> dict:
         with self._lock:
             pos = {
                 "id": uuid.uuid4().hex[:8],
@@ -78,6 +79,10 @@ class AppState:
                 "amount_usd": amount_usd,
                 "tokens": tokens,
                 "liquidez_usd": liquidez_usd,   # liquidez à compra (p/ slippage de venda)
+                # hype à compra (mostrado no card do dashboard)
+                "buyers_h1": buyers_h1,
+                "volume_h1": volume_h1,
+                "txns_h1": txns_h1,
                 "opened_at": time.time(),
                 "pl_pct": 0.0,
                 "pl_usd": 0.0,

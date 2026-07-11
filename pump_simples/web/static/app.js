@@ -47,6 +47,24 @@
     if (mint) window.open("https://pump.fun/coin/" + encodeURIComponent(mint), "_blank", "noopener");
   }
 
+  function fmtCompact(v) {
+    if (v === null || v === undefined || isNaN(v)) return "—";
+    const n = Number(v);
+    if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "k";
+    return "$" + n.toFixed(0);
+  }
+
+  // "hype" da moeda à compra: nº de compradores + volume (1h). Chama mais fogo quanto
+  // mais compradores. Vazio se não houver dados (trades antigos).
+  function hypeBadge(o) {
+    const b = o.buyers_h1, v = o.volume_h1;
+    if ((b === null || b === undefined) && (v === null || v === undefined)) return "";
+    const nb = Number(b || 0);
+    const fogo = nb >= 100 ? "🔥🔥🔥" : nb >= 40 ? "🔥🔥" : nb >= 10 ? "🔥" : "•";
+    return `<span class="hype" title="compradores e volume na 1ª hora">${fogo} ${nb} compradores · ${fmtCompact(v)} vol</span>`;
+  }
+
   // ---------- cards ----------
   function posicaoCard(p) {
     const cls = signClass(p.pl_pct);
@@ -60,6 +78,7 @@
         <div>
           <div class="name">${pumpLink(p.mint, p.name || "?")}</div>
           <div class="mint">${shortMint(p.mint)}</div>
+          ${hypeBadge(p)}
         </div>
         <div class="pl ${cls}">${fmtPct(p.pl_pct)}</div>
         <div class="meta">
@@ -95,6 +114,7 @@
             <span class="tag ${h.motivo_saida || ""}">${escapeHtml(h.motivo_saida || "")}</span>
           </div>
           <div class="mint">${shortMint(h.mint)}</div>
+          ${hypeBadge(h)}
         </div>
         <div class="pl ${cls}">${fmtPct(h.pl_pct)}</div>
         <div class="meta">

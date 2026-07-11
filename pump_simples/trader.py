@@ -125,7 +125,11 @@ def _executar_compra(pool, amount_usd, preco, seg):
         tokens_humanos = amount_usd / preco if preco else 0.0
         pos = STATE.abrir_posicao(mint=mint, pool_address=pool["pool_address"],
                                   name=nome, entry_price=preco,
-                                  amount_usd=amount_usd, tokens=tokens_humanos)
+                                  amount_usd=amount_usd, tokens=tokens_humanos,
+                                  liquidez_usd=pool.get("liquidity_usd"),
+                                  buyers_h1=pool.get("buyers_h1"),
+                                  volume_h1=pool.get("volume_h1"),
+                                  txns_h1=pool.get("txns_h1"))
         log_event(CFG.log_file, "compra", modo="REAL", mint=mint, name=nome,
                   amount_usd=amount_usd, entry_price=preco,
                   liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
@@ -142,7 +146,10 @@ def _executar_compra(pool, amount_usd, preco, seg):
         pos = STATE.abrir_posicao(mint=mint, pool_address=pool["pool_address"],
                                   name=nome, entry_price=entry_efetivo,
                                   amount_usd=amount_usd, tokens=tokens,
-                                  liquidez_usd=liquidez)
+                                  liquidez_usd=liquidez,
+                                  buyers_h1=pool.get("buyers_h1"),
+                                  volume_h1=pool.get("volume_h1"),
+                                  txns_h1=pool.get("txns_h1"))
         log_event(CFG.log_file, "compra", modo="DRY_RUN", mint=mint, name=nome,
                   amount_usd=amount_usd, entry_price=entry_efetivo, preco_cotado=preco,
                   slippage_pct=round(slip * 100, 2),
