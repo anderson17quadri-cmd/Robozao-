@@ -47,6 +47,8 @@ def _modo_info() -> dict:
         "max_trade_usd": CFG.max_trade_usd,
         "slippage_simulado_pct": (0 if CFG.envio_real_armado else CFG.slippage_simulado_pct),
         "intervalo_verificacao": CFG.intervalo_verificacao_segundos,
+        "hype_min_compradores": CFG.hype_min_compradores,
+        "hype_min_volume_usd": CFG.hype_min_volume_usd,
     }
 
 
@@ -126,6 +128,17 @@ def api_config():
     if not atualizados:
         return jsonify({"ok": False, "motivo": "nada para atualizar"}), 400
     return jsonify({"ok": True, **atualizados})
+
+
+@app.route("/api/hype", methods=["POST"])
+def api_hype():
+    """Liga/desliga o canal de entrada por hype (persiste)."""
+    body = request.get_json(silent=True) or {}
+    if "ativo" in body:
+        STATE.set_hype_ativo(bool(body.get("ativo")))
+    else:
+        STATE.set_hype_ativo(not STATE.hype_ativo)   # toggle
+    return jsonify({"ok": True, "hype_ativo": STATE.hype_ativo})
 
 
 @app.route("/api/reset", methods=["POST"])

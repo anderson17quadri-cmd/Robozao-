@@ -26,6 +26,7 @@ class AppState:
         self.max_trade_usd: float = CFG.max_trade_usd
         self.liquidez_minima_usd: float = CFG.liquidez_minima_usd
         self.marketcap_minimo_usd: float = CFG.marketcap_minimo_usd
+        self.hype_ativo: bool = CFG.hype_ativo   # canal hype ligado/desligado
         self._load()
 
     # ---------- persistência ----------
@@ -39,6 +40,7 @@ class AppState:
             self.max_trade_usd = data.get("max_trade_usd", self.max_trade_usd)
             self.liquidez_minima_usd = data.get("liquidez_minima_usd", self.liquidez_minima_usd)
             self.marketcap_minimo_usd = data.get("marketcap_minimo_usd", self.marketcap_minimo_usd)
+            self.hype_ativo = data.get("hype_ativo", self.hype_ativo)
         except FileNotFoundError:
             pass
         except Exception as exc:
@@ -53,6 +55,7 @@ class AppState:
                 "max_trade_usd": self.max_trade_usd,
                 "liquidez_minima_usd": self.liquidez_minima_usd,
                 "marketcap_minimo_usd": self.marketcap_minimo_usd,
+                "hype_ativo": self.hype_ativo,
                 "atualizado_em": time.time(),
             }
             tmp = CFG.state_file + ".tmp"
@@ -66,7 +69,7 @@ class AppState:
     # ---------- operações ----------
     def abrir_posicao(self, *, mint, pool_address, name, entry_price,
                       amount_usd, tokens, meta_lucro_pct=None, liquidez_usd=None,
-                      buyers_h1=None, volume_h1=None, txns_h1=None) -> dict:
+                      buyers_h1=None, volume_h1=None, txns_h1=None, canal="normal") -> dict:
         with self._lock:
             pos = {
                 "id": uuid.uuid4().hex[:8],
@@ -83,6 +86,7 @@ class AppState:
                 "buyers_h1": buyers_h1,
                 "volume_h1": volume_h1,
                 "txns_h1": txns_h1,
+                "canal": canal,   # "hype" ou "normal"
                 "opened_at": time.time(),
                 "pl_pct": 0.0,
                 "pl_usd": 0.0,
@@ -229,6 +233,12 @@ class AppState:
             self._save_locked()
             return True
 
+    def set_hype_ativo(self, ativo) -> bool:
+        with self._lock:
+            self.hype_ativo = bool(ativo)
+            self._save_locked()
+            return self.hype_ativo
+
     def snapshot(self) -> dict:
         """Cópia segura para o dashboard (sem segredos)."""
         with self._lock:
@@ -242,6 +252,7 @@ class AppState:
                 "max_trade_usd": round(self.max_trade_usd, 4),
                 "liquidez_minima_usd": round(self.liquidez_minima_usd, 2),
                 "marketcap_minimo_usd": round(self.marketcap_minimo_usd, 2),
+                "hype_ativo": self.hype_ativo,
                 "pl_aberto_usd": round(pl_aberto, 4),
                 "pl_realizado_usd": round(realizado, 4),
                 "posicoes": [dict(p) for p in self.posicoes],

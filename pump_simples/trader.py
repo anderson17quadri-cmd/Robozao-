@@ -26,11 +26,33 @@ from state import STATE
 PUMP_SUPPLY_ESTIMADO = 1_000_000_000
 
 
+def _penalidade_iliquidez(liquidez_usd) -> float:
+    """
+    Penalização extra por pool fino (só DRY_RUN). Em liquidez baixa, o preço
+    cotado pela GeckoTerminal "salta" (wicks) e NÃO é realizável — na prática não
+    consegues vender lá. Isto desconta esses ganhos fictícios, aproximando o P/L
+    simulado do que o gráfico real mostraria.
+    """
+    try:
+        liq = float(liquidez_usd or 0)
+    except (TypeError, ValueError):
+        liq = 0
+    if liq < 2000:
+        return 0.30
+    if liq < 5000:
+        return 0.22
+    if liq < 10000:
+        return 0.12
+    if liq < 20000:
+        return 0.06
+    return 0.0
+
+
 def _slippage_fracao(valor_usd: float, liquidez_usd) -> float:
     """
     Slippage estimado por lado (só DRY_RUN), em fração (0.03 = 3%).
-    = base fixa (fees/spread) + impacto do tamanho (valor da trade / liquidez).
-    Assim, trades grandes em pools finos "doem" mais — como na realidade.
+    = base fixa (fees/spread) + impacto do tamanho + penalização por pool fino
+    (preços não realizáveis em liquidez baixa).
     """
     base = CFG.slippage_simulado_pct / 100.0
     impacto = 0.0
@@ -39,7 +61,7 @@ def _slippage_fracao(valor_usd: float, liquidez_usd) -> float:
             impacto = float(valor_usd) / float(liquidez_usd)
     except (TypeError, ValueError, ZeroDivisionError):
         impacto = 0.0
-    return min(0.40, base + impacto)   # teto de 40% para não dar valores absurdos
+    return min(0.60, base + impacto + _penalidade_iliquidez(liquidez_usd))
 
 
 def avaliar_e_comprar(pool: dict) -> None:
@@ -57,7 +79,18 @@ def avaliar_e_comprar(pool: dict) -> None:
     if CFG.max_posicoes_abertas > 0 and len(STATE.posicoes) >= CFG.max_posicoes_abertas:
         return
 
+    # canal HYPE (opcional): token com tração real pode saltar o filtro de mcap.
+    # NUNCA salta liquidez nem segurança. Desligado por default (toggle no dashboard).
+    buyers = int(pool.get("buyers_h1") or 0)
+    volume = float(pool.get("volume_h1") or 0.0)
+    qualifica_hype = (
+        STATE.hype_ativo
+        and (buyers >= CFG.hype_min_compradores or volume >= CFG.hype_min_volume_usd)
+    )
+    canal = "hype" if qualifica_hype else "normal"
+
     # --- Regra 3: liquidez mínima (barata, verifica primeiro) --- (editável no dashboard)
+    # a liquidez NUNCA é ignorada, nem no hype (pouca liquidez = preço fictício/rug).
     if liquidez < STATE.liquidez_minima_usd:
         log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                   motivo="liquidez_baixa", liquidez_usd=liquidez,
@@ -69,11 +102,9 @@ def avaliar_e_comprar(pool: dict) -> None:
                   motivo="sem_preco")
         return
 
-    # --- Regra 4: market cap mínimo à entrada (0 = desligado) ---
+    # --- Regra 4: market cap mínimo à entrada (0 = desligado; hype salta este) ---
     # pump.fun tem ~1e9 de supply => market cap ≈ preço * 1e9.
-    # Os dados mostraram que tokens comprados a mcap baixo (~$3k) rugam;
-    # os que sobem entraram a ~$20k. Este filtro corta os "cedo demais".
-    if STATE.marketcap_minimo_usd > 0:
+    if STATE.marketcap_minimo_usd > 0 and not qualifica_hype:
         marketcap = preco * PUMP_SUPPLY_ESTIMADO
         if marketcap < STATE.marketcap_minimo_usd:
             log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
@@ -99,10 +130,10 @@ def avaliar_e_comprar(pool: dict) -> None:
                   motivo="saldo_insuficiente", saldo=STATE.saldo_usd)
         return
 
-    _executar_compra(pool, amount_usd, preco, seg)
+    _executar_compra(pool, amount_usd, preco, seg, canal)
 
 
-def _executar_compra(pool, amount_usd, preco, seg):
+def _executar_compra(pool, amount_usd, preco, seg, canal="normal"):
     mint = pool["mint"]
     nome = pool.get("name", "?")
 
@@ -129,9 +160,9 @@ def _executar_compra(pool, amount_usd, preco, seg):
                                   liquidez_usd=pool.get("liquidity_usd"),
                                   buyers_h1=pool.get("buyers_h1"),
                                   volume_h1=pool.get("volume_h1"),
-                                  txns_h1=pool.get("txns_h1"))
+                                  txns_h1=pool.get("txns_h1"), canal=canal)
         log_event(CFG.log_file, "compra", modo="REAL", mint=mint, name=nome,
-                  amount_usd=amount_usd, entry_price=preco,
+                  amount_usd=amount_usd, entry_price=preco, canal=canal,
                   liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),
@@ -149,10 +180,10 @@ def _executar_compra(pool, amount_usd, preco, seg):
                                   liquidez_usd=liquidez,
                                   buyers_h1=pool.get("buyers_h1"),
                                   volume_h1=pool.get("volume_h1"),
-                                  txns_h1=pool.get("txns_h1"))
+                                  txns_h1=pool.get("txns_h1"), canal=canal)
         log_event(CFG.log_file, "compra", modo="DRY_RUN", mint=mint, name=nome,
                   amount_usd=amount_usd, entry_price=entry_efetivo, preco_cotado=preco,
-                  slippage_pct=round(slip * 100, 2),
+                  slippage_pct=round(slip * 100, 2), canal=canal,
                   liquidez_usd=liquidez, dex=pool.get("dex"),
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),

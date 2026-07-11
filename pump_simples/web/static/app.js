@@ -76,7 +76,7 @@
     return `
       <div class="card ${cls}" data-id="${p.id}">
         <div>
-          <div class="name">${pumpLink(p.mint, p.name || "?")}</div>
+          <div class="name">${pumpLink(p.mint, p.name || "?")}${p.canal === "hype" ? ' <span class="tag-hype">HYPE</span>' : ""}</div>
           <div class="mint">${shortMint(p.mint)}</div>
           ${hypeBadge(p)}
         </div>
@@ -170,6 +170,14 @@
       btn.querySelector(".lbl").textContent = "LIGAR BOT";
     }
     $("statusLine").textContent = state.ultima_msg || (state.bot_running ? "a correr" : "bot parado");
+
+    // botão HYPE (on/off)
+    const hb = $("hypeBtn");
+    if (hb) {
+      const on = !!state.hype_ativo;
+      hb.classList.toggle("on", on); hb.classList.toggle("off", !on);
+      hb.textContent = "🔥 HYPE: " + (on ? "on" : "off");
+    }
 
     // valor por entrada — não sobrescreve enquanto o utilizador escreve
     $("cfgCur").textContent = SIM;
@@ -302,9 +310,15 @@
     } catch (e) { if (btn) btn.textContent = "erro"; }
   }
 
+  async function toggleHype() {
+    try { await fetch("/api/hype", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); await poll(); }
+    catch (e) { /* ignora */ }
+  }
+
   // ---------- eventos ----------
   $("toggleBtn").addEventListener("click", () => toggle(false));
   $("resetBtn").addEventListener("click", reiniciar);
+  $("hypeBtn").addEventListener("click", toggleHype);
   $("tradeSave").addEventListener("click", salvarValorEntrada);
   // grava também ao sair do campo (não precisas de carregar no "ok")
   $("tradeInput").addEventListener("change", salvarValorEntrada);

@@ -78,6 +78,15 @@ class Config:
     liquidez_minima_usd: float = 10000.0
     marketcap_minimo_usd: float = 10000.0     # 0 = desligado (mcap ≈ preço * 1e9)
 
+    # --- Canal HYPE (opcional, toggle no dashboard) ---
+    # Quando ligado, compra também tokens com tração real (compradores + volume)
+    # que o filtro de MARKET CAP rejeitaria — mantendo liquidez mínima e segurança.
+    # Limites escolhidos pelos dados: 100+ compradores tendia a PERDER (comprar o
+    # topo); a zona boa foi ~40-100. Por isso exijo tração moderada, não extrema.
+    hype_ativo: bool = False
+    hype_min_compradores: int = 40
+    hype_min_volume_usd: float = 10000.0
+
     # --- Regras de saída ---
     # take-profit fixo. 0 = SEM meta para cima (deixa o pico correr; só o trailing
     # gere a subida). Podes ainda definir uma meta por posição no dashboard.
@@ -156,6 +165,9 @@ def load_config() -> Config:
         bitquery_api_key=_get("BITQUERY_API_KEY", ""),
         liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 10000.0),
         marketcap_minimo_usd=_get_float("MARKETCAP_MINIMO_USD", 10000.0),
+        hype_ativo=_get_bool("HYPE_ATIVO", False),
+        hype_min_compradores=_get_int("HYPE_MIN_COMPRADORES", 40),
+        hype_min_volume_usd=_get_float("HYPE_MIN_VOLUME_USD", 10000.0),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 0.0),
         trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),

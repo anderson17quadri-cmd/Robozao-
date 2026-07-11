@@ -72,6 +72,11 @@ body{
   box-shadow:0 6px 20px rgba(255,77,94,.35)}
 .toggle.on .dot{background:#fff;box-shadow:0 0 8px #fff;animation:pulse 1.2s infinite}
 .topbar-btns{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn-hype{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+  border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
+.btn-hype.on{color:#1a1205;background:linear-gradient(180deg,#ffc24d,#ffb020);border-color:transparent}
+.tag-hype{font-size:9px;font-weight:800;letter-spacing:.5px;color:#1a1205;
+  background:var(--amber);border-radius:5px;padding:1px 6px;vertical-align:middle}
 .btn-reset{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
   border-radius:999px;padding:10px 16px;cursor:pointer;font-weight:700;font-size:12px;
   transition:border-color .12s,color .12s}
