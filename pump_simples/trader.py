@@ -26,6 +26,22 @@ from state import STATE
 PUMP_SUPPLY_ESTIMADO = 1_000_000_000
 
 
+def _slippage_fracao(valor_usd: float, liquidez_usd) -> float:
+    """
+    Slippage estimado por lado (só DRY_RUN), em fração (0.03 = 3%).
+    = base fixa (fees/spread) + impacto do tamanho (valor da trade / liquidez).
+    Assim, trades grandes em pools finos "doem" mais — como na realidade.
+    """
+    base = CFG.slippage_simulado_pct / 100.0
+    impacto = 0.0
+    try:
+        if liquidez_usd and liquidez_usd > 0:
+            impacto = float(valor_usd) / float(liquidez_usd)
+    except (TypeError, ValueError, ZeroDivisionError):
+        impacto = 0.0
+    return min(0.40, base + impacto)   # teto de 40% para não dar valores absurdos
+
+
 def avaliar_e_comprar(pool: dict) -> None:
     """Aplica as regras de entrada a um pool candidato."""
     mint = pool.get("mint", "")
@@ -116,14 +132,19 @@ def _executar_compra(pool, amount_usd, preco, seg):
                   signature=res["signature"], pos_id=pos["id"],
                   seguranca=seg["motivo"])
     else:
-        # caminho SIMULADO (DRY_RUN)
-        tokens = amount_usd / preco if preco else 0.0
+        # caminho SIMULADO (DRY_RUN) — aplica slippage: enches mais caro que a cotação
+        liquidez = pool.get("liquidity_usd")
+        slip = _slippage_fracao(amount_usd, liquidez)
+        entry_efetivo = preco * (1.0 + slip)
+        tokens = amount_usd / entry_efetivo if entry_efetivo else 0.0
         pos = STATE.abrir_posicao(mint=mint, pool_address=pool["pool_address"],
-                                  name=nome, entry_price=preco,
-                                  amount_usd=amount_usd, tokens=tokens)
+                                  name=nome, entry_price=entry_efetivo,
+                                  amount_usd=amount_usd, tokens=tokens,
+                                  liquidez_usd=liquidez)
         log_event(CFG.log_file, "compra", modo="DRY_RUN", mint=mint, name=nome,
-                  amount_usd=amount_usd, entry_price=preco,
-                  liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
+                  amount_usd=amount_usd, entry_price=entry_efetivo, preco_cotado=preco,
+                  slippage_pct=round(slip * 100, 2),
+                  liquidez_usd=liquidez, dex=pool.get("dex"),
                   pos_id=pos["id"], seguranca=seg["motivo"])
 
 
@@ -135,7 +156,7 @@ def verificar_posicoes() -> None:
             # sem preço => não decide nada agora (não vende às cegas)
             continue
 
-        STATE.atualizar_preco(pos["id"], preco)
+        STATE.atualizar_preco(pos["id"], preco)  # também atualiza o pico
         pl_pct = (preco / pos["entry_price"] - 1.0) * 100.0 if pos["entry_price"] else 0.0
         idade_min = (time.time() - pos["opened_at"]) / 60.0
 
@@ -143,11 +164,16 @@ def verificar_posicoes() -> None:
         meta = pos.get("meta_lucro_pct")
         alvo_tp = meta if (meta is not None and meta > 0) else CFG.take_profit_pct
 
+        # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO.
+        # (quando o pico ainda ≈ entrada, isto age como stop-loss desde a compra)
+        pico = pos.get("preco_pico") or pos["entry_price"]
+        gatilho_trailing = pico * (1.0 - CFG.trailing_stop_pct / 100.0) if pico else 0.0
+
         motivo = None
         if pl_pct >= alvo_tp:
             motivo = "take_profit"
-        elif pl_pct <= -CFG.stop_loss_pct:
-            motivo = "stop_loss"
+        elif gatilho_trailing and preco <= gatilho_trailing:
+            motivo = "trailing_stop"
         elif idade_min >= CFG.timeout_minutos:
             motivo = "timeout"
 
@@ -205,8 +231,13 @@ def _executar_venda(pos, preco, motivo):
                   pl_usd=fechado["pl_usd"], pl_pct=fechado["pl_pct"],
                   signature=res["signature"], pos_id=pos["id"])
     else:
-        fechado = STATE.fechar_posicao(pos["id"], preco_saida=preco, motivo=motivo)
+        # DRY_RUN — aplica slippage: enches a venda mais barato que a cotação.
+        valor_bruto = (pos.get("tokens") or 0.0) * preco   # tamanho da venda em USD
+        slip = _slippage_fracao(valor_bruto, pos.get("liquidez_usd"))
+        exit_efetivo = preco * (1.0 - slip)
+        fechado = STATE.fechar_posicao(pos["id"], preco_saida=exit_efetivo, motivo=motivo)
         log_event(CFG.log_file, "venda", modo="DRY_RUN", mint=pos["mint"],
-                  name=pos["name"], motivo=motivo, exit_price=preco,
+                  name=pos["name"], motivo=motivo, exit_price=exit_efetivo,
+                  preco_cotado=preco, slippage_pct=round(slip * 100, 2),
                   pl_usd=fechado["pl_usd"], pl_pct=fechado["pl_pct"],
                   pos_id=pos["id"])

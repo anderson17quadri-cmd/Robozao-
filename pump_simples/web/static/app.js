@@ -37,10 +37,14 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
   function pumpLink(mint, texto) {
-    // nome/símbolo do token vira link para a página do pump.fun (nova aba)
+    // nome/símbolo do token abre a página do pump.fun (via delegação — ver abaixo).
+    // Usa span+data-mint em vez de <a>, para o re-render de 2.5s não "comer" o toque.
     if (!mint) return escapeHtml(texto);
-    return `<a class="tok-link" href="https://pump.fun/coin/${escapeHtml(mint)}"
-              target="_blank" rel="noopener">${escapeHtml(texto)} ↗</a>`;
+    return `<span class="tok-link" data-mint="${escapeHtml(mint)}" role="link" tabindex="0">${escapeHtml(texto)} ↗</span>`;
+  }
+
+  function openPump(mint) {
+    if (mint) window.open("https://pump.fun/coin/" + encodeURIComponent(mint), "_blank", "noopener");
   }
 
   // ---------- cards ----------
@@ -254,8 +258,12 @@
     const fn = pendingConfirm; hideModal(); if (fn) fn();
   });
 
-  // delegação de cliques nos botões dentro das posições (vender / guardar meta)
+  // delegação de cliques dentro das posições (link pump.fun / vender / guardar meta).
+  // Os contentores (#posicoes/#historico) não são substituídos no re-render — só o
+  // seu innerHTML — por isso o listener sobrevive e o toque no link nunca se perde.
   $("posicoes").addEventListener("click", (ev) => {
+    const link = ev.target.closest(".tok-link");
+    if (link) { openPump(link.getAttribute("data-mint")); return; }
     const b = ev.target.closest("button");
     if (!b) return;
     const id = b.getAttribute("data-id");
@@ -266,6 +274,12 @@
       const input = card ? card.querySelector(".meta-input") : null;
       salvarMeta(id, input ? input.value.trim() : "");
     }
+  });
+
+  // links pump.fun no histórico
+  $("historico").addEventListener("click", (ev) => {
+    const link = ev.target.closest(".tok-link");
+    if (link) openPump(link.getAttribute("data-mint"));
   });
 
   poll();

@@ -38,10 +38,13 @@ def _modo_info() -> dict:
         "wallet": wallet_status(),
         "pubkey": get_public_key(),
         "take_profit_pct": CFG.take_profit_pct,
+        "trailing_stop_pct": CFG.trailing_stop_pct,
         "stop_loss_pct": CFG.stop_loss_pct,
         "timeout_minutos": CFG.timeout_minutos,
         "liquidez_minima_usd": CFG.liquidez_minima_usd,
+        "marketcap_minimo_usd": CFG.marketcap_minimo_usd,
         "max_trade_usd": CFG.max_trade_usd,
+        "slippage_simulado_pct": (0 if CFG.envio_real_armado else CFG.slippage_simulado_pct),
         "intervalo_verificacao": CFG.intervalo_verificacao_segundos,
     }
 

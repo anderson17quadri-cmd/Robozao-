@@ -59,7 +59,7 @@ class AppState:
 
     # ---------- operações ----------
     def abrir_posicao(self, *, mint, pool_address, name, entry_price,
-                      amount_usd, tokens, meta_lucro_pct=None) -> dict:
+                      amount_usd, tokens, meta_lucro_pct=None, liquidez_usd=None) -> dict:
         with self._lock:
             pos = {
                 "id": uuid.uuid4().hex[:8],
@@ -68,8 +68,10 @@ class AppState:
                 "name": name,
                 "entry_price": entry_price,
                 "current_price": entry_price,
+                "preco_pico": entry_price,   # pico desde a compra (para o trailing stop)
                 "amount_usd": amount_usd,
                 "tokens": tokens,
+                "liquidez_usd": liquidez_usd,   # liquidez à compra (p/ slippage de venda)
                 "opened_at": time.time(),
                 "pl_pct": 0.0,
                 "pl_usd": 0.0,
@@ -102,6 +104,9 @@ class AppState:
             for p in self.posicoes:
                 if p["id"] == pos_id:
                     p["current_price"] = preco
+                    # o pico só sobe, nunca desce (referência do trailing stop)
+                    pico = p.get("preco_pico") or p.get("entry_price") or preco
+                    p["preco_pico"] = max(pico, preco)
                     if p["entry_price"]:
                         p["pl_pct"] = (preco / p["entry_price"] - 1.0) * 100.0
                         p["pl_usd"] = p["amount_usd"] * (p["pl_pct"] / 100.0)

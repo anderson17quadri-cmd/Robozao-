@@ -152,7 +152,8 @@ body{
 .up{color:var(--up)} .down{color:var(--down)}
 
 /* link para o pump.fun */
-.tok-link{color:var(--accent-2);text-decoration:none;border-bottom:1px dotted rgba(94,234,212,.5)}
+.tok-link{color:var(--accent-2);text-decoration:none;cursor:pointer;
+  border-bottom:1px dotted rgba(94,234,212,.5)}
 .tok-link:hover{color:var(--up);border-bottom-color:var(--up)}
 
 /* badge "já vendido" no histórico */

@@ -78,7 +78,10 @@ class Config:
 
     # --- Regras de saída ---
     take_profit_pct: float = 50.0
-    stop_loss_pct: float = 25.0   # dados (secção 7): stops apanham rugs reais que NÃO recuperam
+    # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO (não desde a compra).
+    # Substitui o stop-loss fixo — quando o pico ≈ entrada, comporta-se como um stop normal.
+    trailing_stop_pct: float = 30.0
+    stop_loss_pct: float = 25.0   # LEGADO: já não é usado (substituído pelo trailing)
     timeout_minutos: float = 10.0
     intervalo_verificacao_segundos: int = 5   # verifica posições mais depressa (era 15)
 
@@ -87,6 +90,9 @@ class Config:
     saldo_virtual_inicial: float = 1000.0
     max_posicoes_abertas: int = 0             # 0 = SEM limite (limitado só pelo saldo)
     moeda_simbolo: str = "€"                  # símbolo mostrado no saldo/P&L da carteira
+    # slippage estimado por lado (só DRY_RUN) — torna o P/L simulado mais realista.
+    # Aplica-se na compra (enches mais caro) e na venda (enches mais barato).
+    slippage_simulado_pct: float = 3.0
 
     # --- Robustez ---
     rpc_max_req_por_segundo: float = 5.0
@@ -144,6 +150,7 @@ def load_config() -> Config:
         liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 1000.0),
         marketcap_minimo_usd=_get_float("MARKETCAP_MINIMO_USD", 10000.0),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 50.0),
+        trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
         intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 5),
@@ -151,6 +158,7 @@ def load_config() -> Config:
         saldo_virtual_inicial=_get_float("SALDO_VIRTUAL_INICIAL", 1000.0),
         max_posicoes_abertas=_get_int("MAX_POSICOES_ABERTAS", 0),
         moeda_simbolo=_get("MOEDA_SIMBOLO", "€"),
+        slippage_simulado_pct=_get_float("SLIPPAGE_SIMULADO_PCT", 3.0),
         rpc_max_req_por_segundo=_get_float("RPC_MAX_REQ_POR_SEGUNDO", 5.0),
         gecko_max_req_por_segundo=_get_float("GECKO_MAX_REQ_POR_SEGUNDO", 2.0),
         intervalo_scan_segundos=_get_int("INTERVALO_SCAN_SEGUNDOS", 20),

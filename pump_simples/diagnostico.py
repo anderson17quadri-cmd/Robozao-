@@ -239,28 +239,32 @@ def _analise_arrependimento(estado: dict):
               f"(estes são os que doem — vendidos no fundo)")
         print(f"        variação pós-venda média: {(_mediana(vars_) or 0):+.1f}% (mediana)")
 
+    trailing = [h for h in seguidos if h.get("motivo_saida") == "trailing_stop"]
     stops = [h for h in seguidos if h.get("motivo_saida") == "stop_loss"]
     timeouts = [h for h in seguidos if h.get("motivo_saida") == "timeout"]
     tps = [h for h in seguidos if h.get("motivo_saida") == "take_profit"]
 
-    _bloco("STOP-LOSS", stops)
+    _bloco("TRAILING-STOP", trailing)
+    _bloco("STOP-LOSS (legado)", stops)
     _bloco("TIMEOUT", timeouts)
     _bloco("TAKE-PROFIT", tps)
 
-    # veredicto simples sobre o stop-loss
-    if stops:
-        subiram = sum(1 for h in stops if (h.get("var_pos_venda_pct") or 0) > 0)
-        pct = subiram / len(stops) * 100
+    # veredicto sobre a saída de descida (trailing; ou o stop antigo se ainda houver)
+    saidas_descida = trailing or stops
+    rotulo = "trailing-stops" if trailing else "stop-losses"
+    if saidas_descida:
+        subiram = sum(1 for h in saidas_descida if (h.get("var_pos_venda_pct") or 0) > 0)
+        pct = subiram / len(saidas_descida) * 100
         print("   -----")
         if pct >= 60:
-            print(f"   👉 {pct:.0f}% dos stop-losses SUBIRAM depois de vender: o stop")
-            print("      parece APERTADO — alargar STOP_LOSS_PCT deve ajudar.")
+            print(f"   👉 {pct:.0f}% dos {rotulo} SUBIRAM depois de vender: saída apertada")
+            print("      — considera alargar TRAILING_STOP_PCT.")
         elif pct <= 35:
-            print(f"   👉 só {pct:.0f}% recuperaram: o stop está a proteger bem de rugs.")
+            print(f"   👉 só {pct:.0f}% recuperaram: a saída está a proteger bem de rugs.")
             print("      Alargar iria só aumentar as perdas — não recomendado.")
         else:
-            print(f"   👉 {pct:.0f}% recuperaram: zona cinzenta. Alargar um pouco (ex: -35%)")
-            print("      e voltar a medir é o mais sensato.")
+            print(f"   👉 {pct:.0f}% recuperaram: zona cinzenta. Ajusta o TRAILING_STOP_PCT")
+            print("      aos poucos e volta a medir.")
 
 
 def _analise_padroes(compras: list[dict], vendas: list[dict]):

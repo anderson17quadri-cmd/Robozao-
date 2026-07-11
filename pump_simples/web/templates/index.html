@@ -89,10 +89,11 @@
 
   <footer class="rules">
     <span>TP <b class="up">+{{ '%.0f'|format(modo.take_profit_pct) }}%</b></span>
-    <span>SL <b class="down">−{{ '%.0f'|format(modo.stop_loss_pct) }}%</b></span>
+    <span>trailing <b class="down">−{{ '%.0f'|format(modo.trailing_stop_pct) }}%</b> do pico</span>
     <span>timeout <b>{{ '%.0f'|format(modo.timeout_minutos) }}min</b></span>
-    <span>trade máx <b>${{ '%.0f'|format(modo.max_trade_usd) }}</b></span>
-    <span>liq. mín <b>${{ '%.0f'|format(modo.liquidez_minima_usd) }}</b></span>
+    <span>trade máx <b>{{ modo.moeda_simbolo }}{{ '%.0f'|format(modo.max_trade_usd) }}</b></span>
+    <span>mcap mín <b>${{ '%.0f'|format(modo.marketcap_minimo_usd) }}</b></span>
+    {% if modo.slippage_simulado_pct %}<span>slippage sim <b>{{ '%.0f'|format(modo.slippage_simulado_pct) }}%</b></span>{% endif %}
     <span class="sec-note">segurança: mint+freeze revogados (fail-closed)</span>
   </footer>
 

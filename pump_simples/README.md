@@ -23,9 +23,19 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 
 ### Regras de saída (o que disparar primeiro, vence)
 - **Take-profit:** vende tudo a `+TAKE_PROFIT_PCT%` (default +50%).
-- **Stop-loss:** vende tudo a `-STOP_LOSS_PCT%` (default −25%).
+- **Trailing stop:** vende tudo se cair `TRAILING_STOP_PCT%` (default 30%) desde o
+  **pico** mais alto atingido (não desde a compra). O pico só sobe. Substitui o
+  stop-loss fixo — quando o token nunca sobe acima da entrada, age como um
+  stop-loss normal. `STOP_LOSS_PCT` ficou **legado** (já não é usado).
 - **Timeout:** vende tudo passados `TIMEOUT_MINUTOS` (default 10 min).
-- Verificação a cada `INTERVALO_VERIFICACAO_SEGUNDOS` (default 15s).
+- Verificação a cada `INTERVALO_VERIFICACAO_SEGUNDOS` (default 5s).
+
+### Slippage simulado (só DRY_RUN)
+Para o P/L simulado ser mais realista, cada compra/venda em DRY_RUN sofre um
+slippage estimado (`SLIPPAGE_SIMULADO_PCT`, default 3% por lado) + um impacto pelo
+tamanho da trade face à liquidez. Enches a compra mais caro e a venda mais barato.
+Em modo REAL isto não se aplica (o slippage é o real da Jupiter, `SLIPPAGE_BPS`).
+**Nota:** mesmo assim o DRY_RUN é otimista — assume que consegues sempre executar.
 
 ---
 
