@@ -86,6 +86,45 @@ python bot.py     # Ctrl+C para parar
 
 ---
 
+## Correr no Termux (Android)
+
+Dá para correr no telemóvel. Para **DRY_RUN não precisas da chave privada** —
+só de `requests` + `flask`.
+
+```bash
+# 1. atualizar e instalar o básico
+pkg update && pkg upgrade -y
+pkg install -y python git
+
+# 2. obter o código
+git clone https://github.com/anderson17quadri-cmd/Robozao-.git
+cd Robozao-/pump_simples
+
+# 3. dependências (DRY_RUN só precisa destas duas)
+pip install flask requests
+
+# 4. configurar
+cp .env.example .env
+nano .env      # deixa DRY_RUN=true. Cola a SOLANA_RPC_URL (p/ o check de segurança).
+
+# 5. correr
+python dashboard.py
+```
+
+Depois abre no browser do telemóvel: **http://localhost:5000** e carrega em
+"LIGAR BOT".
+
+**Notas Termux:**
+- Em DRY_RUN, `WALLET_PRIVATE_KEY` pode ficar vazia. Só a `SOLANA_RPC_URL` é
+  útil (para o bot confirmar as autoridades dos mints); sem ela, o bot rejeita
+  tudo por fail-closed — seguro, mas não simula compras.
+- O modo **REAL** precisa de `solders`, que é compilado em Rust e pode ser
+  chato de instalar no Termux (`pkg install rust binutils` e depois
+  `pip install solders`, pode demorar). Para testes, fica-te pelo DRY_RUN.
+- Se `localhost` não abrir, confirma a porta no `.env` (`DASHBOARD_PORT`).
+
+---
+
 ## Ativar modo REAL (duas travas)
 
 Por segurança são precisas **duas** confirmações no `.env`:
