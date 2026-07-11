@@ -107,6 +107,21 @@ def main():
     modos = Counter(("REAL" if e.get("envio_real") else "DRY_RUN") for e in arranques)
     print(f"arranques do bot: {len(arranques)}  | modo: {dict(modos)}")
 
+    # ---------- 0) MODO: as trades foram REAIS ou simuladas? ----------
+    trades = [e for e in eventos if e.get("tipo") in ("compra", "venda")]
+    modos_trade = Counter(e.get("modo", "?") for e in trades)
+    reais = [e for e in trades if e.get("signature")]  # só trades reais têm assinatura
+    print("\n" + "-" * 62)
+    print("0) MODO DAS TRADES (reais vs simuladas)")
+    print(f"   por modo: {dict(modos_trade)}")
+    if reais:
+        print(f"   ⚠️  {len(reais)} trade(s) REAIS on-chain (com assinatura):")
+        for e in reais[:5]:
+            print(f"        {(e.get('name') or '?')[:20]} | sig {str(e.get('signature'))[:24]}…")
+    else:
+        print("   ✅ NENHUMA transação real. Tudo DRY_RUN (simulado) — 0 SOL gasto,")
+        print("      0 assinaturas on-chain. Nada foi comprado/vendido a sério.")
+
     # ---------- 1) DETEÇÃO / ANÁLISE ----------
     compras = [e for e in eventos if e.get("tipo") == "compra"]
     rejeicoes = [e for e in eventos if e.get("tipo") == "rejeicao"]
