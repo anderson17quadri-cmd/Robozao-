@@ -5,11 +5,13 @@
   const $ = (id) => document.getElementById(id);
   const MODO = window.MODO || {};
   const REAL = !!MODO.envio_real_armado;
+  const SIM = MODO.moeda_simbolo || "€";   // símbolo da carteira (saldo/P&L)
 
   // ---------- formatação ----------
+  // valores da CARTEIRA (saldo, P/L, valor investido) — na moeda simulada
   function fmtUsd(v) {
     if (v === null || v === undefined || isNaN(v)) return "—";
-    return (v < 0 ? "-" : "") + "$" + Math.abs(v).toFixed(2);
+    return (v < 0 ? "-" : "") + SIM + Math.abs(v).toFixed(2);
   }
   function fmtPrice(v) {
     if (!v) return "—";
@@ -204,8 +206,25 @@
   }
   function hideModal() { $("modal").classList.add("hidden"); pendingConfirm = null; }
 
+  async function reiniciar() {
+    showConfirm("Reiniciar simulação",
+      `Repor o saldo a ${SIM}${Number(MODO.saldo_inicial || 1000).toFixed(0)} e limpar ` +
+      `posições e histórico? (só afeta a simulação, nada on-chain)`, false,
+      async () => {
+        try {
+          const r = await fetch("/api/reset", { method: "POST" });
+          if (r.status === 409) {
+            showConfirm("Bot ligado", "Desliga o bot antes de reiniciar.", false, null);
+            return;
+          }
+          await poll();
+        } catch (e) { /* ignora */ }
+      });
+  }
+
   // ---------- eventos ----------
   $("toggleBtn").addEventListener("click", () => toggle(false));
+  $("resetBtn").addEventListener("click", reiniciar);
   $("modalCancel").addEventListener("click", hideModal);
   $("modalOk").addEventListener("click", () => {
     const fn = pendingConfirm; hideModal(); if (fn) fn();

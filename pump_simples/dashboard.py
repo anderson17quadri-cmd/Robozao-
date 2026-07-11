@@ -32,6 +32,9 @@ def _modo_info() -> dict:
         "envio_real_armado": CFG.envio_real_armado,
         "modo_label": "REAL" if CFG.envio_real_armado else "DRY_RUN",
         "fonte_deteccao": CFG.fonte_deteccao,
+        "moeda_simbolo": CFG.moeda_simbolo,
+        "saldo_inicial": CFG.saldo_virtual_inicial,
+        "max_posicoes": CFG.max_posicoes_abertas,
         "wallet": wallet_status(),
         "pubkey": get_public_key(),
         "take_profit_pct": CFG.take_profit_pct,
@@ -98,6 +101,17 @@ def api_vender(pos_id):
     res = trader.vender_manual(pos_id)
     status = 200 if res["ok"] else 400
     return jsonify(res), status
+
+
+@app.route("/api/reset", methods=["POST"])
+def api_reset():
+    """Reinicia a simulação (saldo inicial, sem posições/histórico). Só DRY_RUN."""
+    if CFG.envio_real_armado:
+        return jsonify({"ok": False, "motivo": "reset indisponível em MODO REAL"}), 400
+    if CONTROLLER.is_running():
+        return jsonify({"ok": False, "motivo": "para o bot antes de reiniciar"}), 409
+    STATE.reset()
+    return jsonify({"ok": True, "saldo_usd": STATE.saldo_usd})
 
 
 @app.route("/api/posicao/<pos_id>/meta", methods=["POST"])

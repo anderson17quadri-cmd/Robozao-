@@ -12,6 +12,7 @@ e nunca derruba o loop.
 import requests
 
 from config import CFG, SOL_MINT
+from ratelimit import RateLimiter
 
 _HEADERS = {"Accept": "application/json", "User-Agent": "robozao/1.0"}
 _TIMEOUT = 12
@@ -19,9 +20,13 @@ _TIMEOUT = 12
 # ids de dex pump.fun na GeckoTerminal (bonding curve + pool graduado)
 _PUMP_DEXES = {"pump-fun", "pumpfun", "pumpswap", "pump-swap"}
 
+# limita as chamadas ao Gecko (free-tier ~30/min) — evita 429 com muitas posições
+gecko_limiter = RateLimiter(CFG.gecko_max_req_por_segundo)
+
 
 def _get_json(url: str, params: dict | None = None) -> dict | None:
     try:
+        gecko_limiter.acquire()
         resp = requests.get(url, params=params, headers=_HEADERS, timeout=_TIMEOUT)
         if resp.status_code != 200:
             return None

@@ -160,6 +160,15 @@ class AppState:
         with self._lock:
             return any(p["mint"] == mint for p in self.posicoes)
 
+    def reset(self):
+        """Reinicia a simulação: saldo volta ao inicial, limpa posições e histórico.
+        Só faz sentido em DRY_RUN — não toca em nada on-chain."""
+        with self._lock:
+            self.saldo_usd = CFG.saldo_virtual_inicial
+            self.posicoes = []
+            self.historico = []
+            self._save_locked()
+
     def snapshot(self) -> dict:
         """Cópia segura para o dashboard (sem segredos)."""
         with self._lock:

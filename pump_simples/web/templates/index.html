@@ -27,9 +27,12 @@
       <span class="wallet">wallet: {{ modo.wallet }}{% if modo.pubkey %} · {{ modo.pubkey[:4] }}…{{ modo.pubkey[-4:] }}{% endif %}</span>
     </div>
 
-    <button id="toggleBtn" class="toggle off">
-      <span class="dot"></span><span class="lbl">LIGAR BOT</span>
-    </button>
+    <div class="topbar-btns">
+      <button id="resetBtn" class="btn-reset" title="Repõe o saldo inicial e limpa posições (só DRY_RUN)">↺ Reiniciar</button>
+      <button id="toggleBtn" class="toggle off">
+        <span class="dot"></span><span class="lbl">LIGAR BOT</span>
+      </button>
+    </div>
   </header>
 
   <!-- KPIs -->

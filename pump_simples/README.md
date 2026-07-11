@@ -73,12 +73,30 @@ Além de mostrar saldo/posições/histórico, o dashboard permite:
 
 ## Moeda
 
-Todo o sistema trabalha em **USD** — é a moeda em que a GeckoTerminal e a Jupiter
-devolvem preços/liquidez. `SALDO_VIRTUAL_INICIAL`, `MAX_TRADE_USD`, etc. são USD.
-Não há conversão para EUR: suportar moeda configurável exigiria uma camada de
-câmbio (FX) em todos os valores mostrados/calculados — não vale a pena para um bot
-de teste. Se quiseres raciocinar em EUR, ajusta os valores mentalmente (≈ multiplica
-por ~0,9).
+A carteira simulada usa o símbolo `MOEDA_SIMBOLO` (default **€**) no saldo e no
+P&L. A matemática do saldo é feita com **rácios de preço** (só a variação % conta),
+por isso a carteira virtual pode estar em € sem qualquer conversão — `SALDO_VIRTUAL_INICIAL`
+e `MAX_TRADE_USD` são a tua unidade (€).
+
+Os **preços dos tokens** (entrada/agora) continuam a ser mostrados em **$**, porque é
+assim que o mercado (GeckoTerminal/Jupiter) os cota — não são convertidos. Ou seja:
+*a tua carteira é em €, as cotações de mercado são em $*. Em modo REAL, as transações
+são sempre em SOL on-chain, independentemente do símbolo mostrado.
+
+## Reiniciar a simulação
+
+O saldo/posições ficam guardados em `state.json` entre reinícios. Para **recomeçar
+do zero** (repor `SALDO_VIRTUAL_INICIAL` e limpar posições/histórico), usa o botão
+**↺ Reiniciar** no dashboard (só DRY_RUN, com o bot desligado). É por isso que, se já
+tinhas corrido antes, o saldo não aparecia nos 1000 — carregava o estado antigo.
+
+## Quantos tokens o bot compra
+
+- **`MAX_POSICOES_ABERTAS`** (default 10) — nº de posições abertas em simultâneo.
+  Ao atingir o limite, o bot só compra mais depois de vender alguma.
+- **`MAX_TRADE_USD`** (default 2) — quanto entra em cada posição.
+- O bot também só compra tokens que passem as 3 regras (pump.fun + autoridades
+  revogadas + liquidez mínima), por isso nem todos os detetados viram compra.
 
 ## ⚠️ Aviso importante — wallet partilhada
 
