@@ -71,6 +71,20 @@ Edita o `.env`:
 
 O `.env` está no `.gitignore` e **nunca** é commitado.
 
+### RPCs públicas grátis (sem chave)
+
+Se a Helius ficar sem créditos (limite mensal), troca a `SOLANA_RPC_URL` por uma
+destas — não precisam de registo nem chave:
+
+| RPC | Nota |
+|---|---|
+| `https://solana-rpc.publicnode.com` | **recomendada** — limites mais folgados |
+| `https://api.mainnet-beta.solana.com` | oficial, mais lenta / rate-limit apertado |
+
+São mais limitadas que a Helius, mas o rate limiter do bot
+(`RPC_MAX_REQ_POR_SEGUNDO`) ajuda a não bater nos limites. Chegam para testar em
+DRY_RUN.
+
 ## Correr
 
 **Dashboard (recomendado)** — corre o bot numa thread e dá-te o toggle:
