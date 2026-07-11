@@ -117,6 +117,28 @@ def get_pool_price(pool_address: str) -> float | None:
     return _f(attrs.get("base_token_price_usd"))
 
 
+def get_pool_info(pool_address: str) -> dict | None:
+    """
+    Info atual e completa de um pool (preço, liquidez, hype) numa só chamada.
+    Usado pela lista de vigia para reavaliar um candidato sem depender de ele
+    ainda aparecer no feed new_pools (que só mostra os mais recentes).
+    """
+    if not pool_address:
+        return None
+    data = _get_json(f"{CFG.gecko_api_base}/networks/solana/pools/{pool_address}")
+    if not data or "data" not in data:
+        return None
+    attrs = (data.get("data", {}) or {}).get("attributes", {}) or {}
+    rel = (data.get("data", {}) or {}).get("relationships", {}) or {}
+    dex_id = ((rel.get("dex", {}) or {}).get("data", {}) or {}).get("id", "")
+    return {
+        "price_usd": _f(attrs.get("base_token_price_usd")),
+        "liquidity_usd": _f(attrs.get("reserve_in_usd")) or 0.0,
+        "dex": dex_id,
+        **_metricas_hype(attrs),
+    }
+
+
 def find_pool_by_mint(mint: str) -> dict | None:
     """
     Dado um mint, encontra o melhor pool (maior liquidez) na GeckoTerminal e

@@ -119,6 +119,33 @@ tinhas corrido antes, o saldo não aparecia nos 1000 — carregava o estado anti
 > trava-as para não haver 429, mas com dezenas de posições os preços podem atualizar
 > mais devagar que o `INTERVALO_VERIFICACAO_SEGUNDOS`.
 
+### Lista de vigia (watchlist)
+
+Tokens pump.fun nascem com liquidez/mcap quase zero. O feed de deteção só mostra
+os muito recentes (~minutos) — sem mais nada, um token rejeitado por liquidez/mcap
+baixos no minuto 1 nunca mais seria reavaliado, mesmo que crescesse o suficiente
+no minuto 15 (já teria saído do feed).
+
+Para resolver isto sem baixar os filtros: tokens rejeitados **só** por liquidez ou
+market cap ficam numa **lista de vigia** e são reavaliados com dados frescos
+periodicamente, comprados assim que qualificarem. Configurável:
+- `VIGIA_TTL_MINUTOS` (default 60) — por quanto tempo um token fica em vigia.
+- `VIGIA_MAX_POR_CICLO` (default 15) — quantos são reavaliados por ciclo (poupa
+  chamadas à GeckoTerminal).
+
+A liquidez mínima e a segurança **nunca** são saltadas — só dá tempo ao token de
+crescer até lá. Compras vindas da vigia aparecem no log com `origem: "vigia"`.
+
+### Canal HYPE (opcional)
+
+Botão **🔥 HYPE** no dashboard (default desligado). Quando ligado, tokens com
+tração real (`HYPE_MIN_COMPRADORES` ou `HYPE_MIN_VOLUME_USD`) saltam **só** o
+filtro de market cap — nunca a liquidez nem a segurança. Os limites (40
+compradores / $10k volume) foram escolhidos com base nos dados: tokens com
+100+ compradores tendiam a **perder** (comprar o topo do pump), por isso o
+canal mira tração moderada, não extrema. Entradas por este canal ficam
+marcadas com o badge `HYPE` no card.
+
 ## ⚠️ Aviso importante — wallet partilhada
 
 Este bot usa a **MESMA wallet Solana do bot anterior** (lê `WALLET_PRIVATE_KEY`

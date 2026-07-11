@@ -17,6 +17,7 @@ Sem IA, sem score, sem checklist. No máximo 1 chamada RPC por candidato.
 import time
 
 import gecko
+import watchlist
 from config import CFG, SOL_MINT
 from logjsonl import log_event
 from solana_rpc import check_mint_authorities
@@ -95,6 +96,7 @@ def avaliar_e_comprar(pool: dict) -> None:
         log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                   motivo="liquidez_baixa", liquidez_usd=liquidez,
                   minimo=STATE.liquidez_minima_usd)
+        watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
         return
 
     if not preco or preco <= 0:
@@ -110,6 +112,7 @@ def avaliar_e_comprar(pool: dict) -> None:
             log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                       motivo="marketcap_baixo", marketcap_usd=marketcap,
                       minimo=STATE.marketcap_minimo_usd, preco=preco)
+            watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
             return
 
     # --- Regra 2: autoridades revogadas (fail-closed) ---
@@ -130,10 +133,12 @@ def avaliar_e_comprar(pool: dict) -> None:
                   motivo="saldo_insuficiente", saldo=STATE.saldo_usd)
         return
 
-    _executar_compra(pool, amount_usd, preco, seg, canal)
+    origem = pool.get("origem", "scan")
+    _executar_compra(pool, amount_usd, preco, seg, canal, origem)
+    watchlist.remover(mint)   # comprado — sai da vigia (no-op se não estava lá)
 
 
-def _executar_compra(pool, amount_usd, preco, seg, canal="normal"):
+def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"):
     mint = pool["mint"]
     nome = pool.get("name", "?")
 
@@ -162,7 +167,7 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal"):
                                   volume_h1=pool.get("volume_h1"),
                                   txns_h1=pool.get("txns_h1"), canal=canal)
         log_event(CFG.log_file, "compra", modo="REAL", mint=mint, name=nome,
-                  amount_usd=amount_usd, entry_price=preco, canal=canal,
+                  amount_usd=amount_usd, entry_price=preco, canal=canal, origem=origem,
                   liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),
@@ -183,7 +188,7 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal"):
                                   txns_h1=pool.get("txns_h1"), canal=canal)
         log_event(CFG.log_file, "compra", modo="DRY_RUN", mint=mint, name=nome,
                   amount_usd=amount_usd, entry_price=entry_efetivo, preco_cotado=preco,
-                  slippage_pct=round(slip * 100, 2), canal=canal,
+                  slippage_pct=round(slip * 100, 2), canal=canal, origem=origem,
                   liquidez_usd=liquidez, dex=pool.get("dex"),
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),
@@ -252,6 +257,49 @@ def vender_manual(pos_id: str) -> dict:
 
     _executar_venda(pos, preco, "manual")
     return {"ok": True, "motivo": "venda manual executada"}
+
+
+def revisar_lista_vigia() -> None:
+    """
+    Reavalia os candidatos na lista de vigia (rejeitados só por liquidez/mcap
+    baixos) com dados FRESCOS de preço/liquidez/hype. Compra se entretanto
+    cresceram o suficiente para passar os filtros. Resolve o caso de um token
+    que ainda não tinha tração no minuto 1 (quando saiu do feed new_pools) mas
+    já a tem no minuto 15 — sem isto, esse crescimento nunca seria visto.
+
+    Verifica só CFG.vigia_max_por_ciclo por chamada (os há mais tempo sem
+    verificar primeiro), para não disparar chamadas de rede a mais de uma vez.
+    """
+    expirados = watchlist.limpar_expirados()
+    if expirados:
+        log_event(CFG.log_file, "vigia_expirado", quantidade=expirados)
+
+    for pool in watchlist.candidatos_para_verificar(CFG.vigia_max_por_ciclo):
+        mint = pool.get("mint")
+        pool_address = pool.get("pool_address")
+        if not mint or not pool_address:
+            watchlist.remover(mint)
+            continue
+        if STATE.tem_posicao_para_mint(mint):
+            watchlist.remover(mint)
+            continue
+
+        info = gecko.get_pool_info(pool_address)
+        if not info:
+            continue   # falha de rede — tenta de novo no próximo ciclo
+
+        pool_fresco = {
+            **pool,
+            "price_usd": info["price_usd"],
+            "liquidity_usd": info["liquidity_usd"],
+            "dex": info.get("dex") or pool.get("dex"),
+            "volume_h1": info.get("volume_h1"),
+            "buyers_h1": info.get("buyers_h1"),
+            "txns_h1": info.get("txns_h1"),
+            "origem": "vigia",
+        }
+        watchlist.atualizar(mint, pool_fresco)
+        avaliar_e_comprar(pool_fresco)   # compra e remove da vigia se qualificar agora
 
 
 def acompanhar_vendidos() -> None:

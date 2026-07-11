@@ -68,20 +68,26 @@ class BotController:
                     ultimo_scan = agora
                     STATE.ultimo_scan = agora
                     import fontes
+                    import watchlist
                     pools = fontes.get_new_pump_pools()  # fonte definida em CFG.fonte_deteccao
-                    STATE.ultima_msg = (
-                        f"{modo} [{CFG.fonte_deteccao}] — {len(pools)} pools, "
-                        f"{len(STATE.posicoes)} posições abertas"
-                    )
                     for pool in pools:
                         if self._stop.is_set():
                             break
                         trader.avaliar_e_comprar(pool)
+                    STATE.ultima_msg = (
+                        f"{modo} [{CFG.fonte_deteccao}] — {len(pools)} pools, "
+                        f"{len(STATE.posicoes)} posições abertas, "
+                        f"{watchlist.tamanho()} em vigia"
+                    )
 
                 # 3) acompanha (só leitura) os tokens já vendidos — cadência lenta
                 if agora - ultimo_acompanhamento >= CFG.intervalo_acompanhar_vendidos_segundos:
                     ultimo_acompanhamento = agora
                     trader.acompanhar_vendidos()
+
+                # 4) reavalia a lista de vigia — tokens que podem ter crescido
+                # até passar a liquidez/mcap desde que saíram do feed new_pools
+                trader.revisar_lista_vigia()
             except Exception as exc:
                 # rede de segurança final — o loop NUNCA morre
                 log_event(CFG.log_file, "erro_loop", erro=str(exc),

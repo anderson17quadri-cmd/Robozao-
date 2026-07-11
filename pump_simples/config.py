@@ -87,6 +87,14 @@ class Config:
     hype_min_compradores: int = 40
     hype_min_volume_usd: float = 10000.0
 
+    # --- Lista de vigia ---
+    # Tokens rejeitados só por liquidez/mcap baixos continuam a ser reavaliados
+    # (com dados frescos) por este tempo, em vez de serem descartados para sempre
+    # assim que saem do feed new_pools (~1min de idade). Compra se crescerem o
+    # suficiente. NUNCA salta segurança — só dá tempo ao token de crescer.
+    vigia_ttl_minutos: float = 60.0
+    vigia_max_por_ciclo: int = 15
+
     # --- Regras de saída ---
     # take-profit fixo. 0 = SEM meta para cima (deixa o pico correr; só o trailing
     # gere a subida). Podes ainda definir uma meta por posição no dashboard.
@@ -168,6 +176,8 @@ def load_config() -> Config:
         hype_ativo=_get_bool("HYPE_ATIVO", False),
         hype_min_compradores=_get_int("HYPE_MIN_COMPRADORES", 40),
         hype_min_volume_usd=_get_float("HYPE_MIN_VOLUME_USD", 10000.0),
+        vigia_ttl_minutos=_get_float("VIGIA_TTL_MINUTOS", 60.0),
+        vigia_max_por_ciclo=_get_int("VIGIA_MAX_POR_CICLO", 15),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 0.0),
         trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
