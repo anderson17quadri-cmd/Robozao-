@@ -187,6 +187,35 @@ class AppState:
         with self._lock:
             return any(p["mint"] == mint for p in self.posicoes)
 
+    def mint_bloqueado(self, mint) -> dict:
+        """
+        Verifica se um mint já rugou antes (prejuízo grande ou colapso de
+        liquidez) e por isso está bloqueado — evita repetir a mesma perda na
+        mesma moeda. Usa o histórico como fonte (reiniciar a simulação limpa
+        o bloqueio também). Devolve {"bloqueado": bool, "motivo": str}.
+        """
+        if not mint:
+            return {"bloqueado": False, "motivo": ""}
+        agora = time.time()
+        with self._lock:
+            for h in self.historico:
+                if h.get("mint") != mint:
+                    continue
+                pl_pct = h.get("pl_pct") or 0.0
+                motivo_saida = h.get("motivo_saida", "")
+                rugou = motivo_saida == "liquidez_colapsou" or pl_pct <= -CFG.blacklist_prejuizo_pct
+                if not rugou:
+                    continue
+                if CFG.blacklist_cooldown_horas <= 0:
+                    return {"bloqueado": True, "motivo":
+                            f"já rugou antes ({motivo_saida}, {pl_pct:+.0f}%) — bloqueio permanente"}
+                horas_passadas = (agora - h.get("closed_at", 0)) / 3600.0
+                if horas_passadas < CFG.blacklist_cooldown_horas:
+                    restante = CFG.blacklist_cooldown_horas - horas_passadas
+                    return {"bloqueado": True, "motivo":
+                            f"já rugou antes ({motivo_saida}, {pl_pct:+.0f}%) — cooldown mais {restante:.1f}h"}
+        return {"bloqueado": False, "motivo": ""}
+
     def reset(self):
         """Reinicia a simulação: saldo volta ao inicial, limpa posições e histórico.
         Mantém o valor de entrada configurado. Só faz sentido em DRY_RUN."""

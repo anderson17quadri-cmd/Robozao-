@@ -135,6 +135,13 @@ class Config:
     # 0 = desligado.
     liquidez_queda_venda_pct: float = 70.0
 
+    # --- Bloqueio de moedas que já rugaram (evita repetir a mesma perda) ---
+    # Se um mint já fechou com prejuízo >= esta % (ou por colapso de liquidez),
+    # fica bloqueado e o bot não volta a comprá-lo. Usa STATE.historico como
+    # fonte — reiniciar a simulação também limpa o bloqueio (faz sentido).
+    blacklist_prejuizo_pct: float = 50.0
+    blacklist_cooldown_horas: float = 0.0   # 0 = bloqueio permanente
+
     # --- Dashboard ---
     dashboard_host: str = "0.0.0.0"
     dashboard_port: int = 5000
@@ -204,6 +211,8 @@ def load_config() -> Config:
         intervalo_acompanhar_vendidos_segundos=_get_int(
             "INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS", 60),
         liquidez_queda_venda_pct=_get_float("LIQUIDEZ_QUEDA_VENDA_PCT", 70.0),
+        blacklist_prejuizo_pct=_get_float("BLACKLIST_PREJUIZO_PCT", 50.0),
+        blacklist_cooldown_horas=_get_float("BLACKLIST_COOLDOWN_HORAS", 0.0),
         dashboard_host=_get("DASHBOARD_HOST", "0.0.0.0"),
         dashboard_port=_get_int("DASHBOARD_PORT", 5000),
     )

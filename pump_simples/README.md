@@ -143,6 +143,20 @@ periodicamente, comprados assim que qualificarem. Configurável:
 A liquidez mínima e a segurança **nunca** são saltadas — só dá tempo ao token de
 crescer até lá. Compras vindas da vigia aparecem no log com `origem: "vigia"`.
 
+### Bloqueio de moedas que já rugaram
+
+Se um mint já fechou com prejuízo ≥ `BLACKLIST_PREJUIZO_PCT` (default 50%) ou por
+`liquidez_colapsou` (sempre bloqueia, qualquer que seja o P/L), o bot **não volta
+a comprá-lo**. Evita repetir a mesma perda na mesma moeda — o mint fica de fora
+antes até de entrar na lista de vigia.
+
+- `BLACKLIST_COOLDOWN_HORAS` (default **0 = bloqueio permanente**). Um valor > 0
+  define um cooldown temporário em horas, após o qual volta a poder ser comprado.
+- Usa `STATE.historico` como fonte da verdade — por isso, carregar em
+  **↺ Reiniciar** limpa o histórico e, com ele, o bloqueio também (faz sentido:
+  é uma simulação nova, do zero).
+- Motivo no log de rejeição: `mint_bloqueado`.
+
 ### Canal HYPE (opcional)
 
 Botão **🔥 HYPE** no dashboard (default desligado). Quando ligado, tokens com

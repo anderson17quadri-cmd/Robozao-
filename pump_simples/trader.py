@@ -76,6 +76,15 @@ def avaliar_e_comprar(pool: dict) -> None:
     if STATE.tem_posicao_para_mint(mint):
         return
 
+    # já rugou antes (prejuízo grande ou colapso de liquidez)? bloqueado —
+    # evita repetir a mesma perda na mesma moeda. Nunca deve nem ficar em vigia.
+    bloqueio = STATE.mint_bloqueado(mint)
+    if bloqueio["bloqueado"]:
+        log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
+                  motivo="mint_bloqueado", detalhe=bloqueio["motivo"])
+        watchlist.remover(mint)
+        return
+
     # limite de posições abertas (0 = SEM limite; fica limitado só pelo saldo)
     if CFG.max_posicoes_abertas > 0 and len(STATE.posicoes) >= CFG.max_posicoes_abertas:
         return
