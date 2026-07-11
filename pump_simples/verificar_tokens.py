@@ -47,11 +47,29 @@ def _verificar_uma(pos: dict, rpc_disponivel: bool) -> None:
     r = gecko.verificar_pool(pool_address, mint)
     if r["existe"]:
         print(f"  ✅ GECKOTERMINAL: pool real — \"{r['name']}\", "
-              f"liquidez ${r['liquidity_usd']:,.0f}, dex={r['dex']}")
+              f"liquidez AGORA ${r['liquidity_usd']:,.0f}, dex={r['dex']}")
         if r["mint_confere"] is False:
             print(f"     ⚠️  MINT NÃO BATE CERTO! guardado={mint} | no pool={r['mint_no_gecko']}")
         elif r["mint_confere"] is True:
             print("     ✅ mint confere com o do pool")
+
+        # compara com a liquidez registada NO MOMENTO DA COMPRA (guardada na posição)
+        liq_compra = pos.get("liquidez_usd")
+        if liq_compra is not None:
+            liq_agora = r["liquidity_usd"]
+            if liq_compra > 0:
+                variacao = (liq_agora / liq_compra - 1.0) * 100.0
+                print(f"  💧 LIQUIDEZ: na compra ${liq_compra:,.0f}  →  agora ${liq_agora:,.0f}  "
+                      f"({variacao:+.0f}%)")
+                if variacao <= -80:
+                    print("     🚨 LIQUIDEZ QUASE TODA REMOVIDA desde a compra — clássico")
+                    print("        \"puxão de tapete\" na liquidez (não no preço). O preço no")
+                    print("        gráfico pode continuar a existir, mas pode não haver dinheiro")
+                    print("        real do outro lado para vender ao preço mostrado.")
+                elif variacao <= -40:
+                    print("     ⚠️  liquidez caiu bastante — atenção redobrada nesta posição.")
+            else:
+                print(f"  💧 LIQUIDEZ: agora ${liq_agora:,.0f} (sem valor de compra guardado p/ comparar)")
     elif r["confirmado"]:
         # confirmou ativamente que NÃO existe (não é falha de rede)
         print(f"  ❌ GECKOTERMINAL: {r['motivo']}")
