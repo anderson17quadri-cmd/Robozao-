@@ -16,6 +16,7 @@ Uso:
 import json
 import statistics
 import sys
+import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -171,6 +172,19 @@ def main():
                   f"{(e.get('pl_pct') or 0):+6.1f}% | {_eur(e.get('pl_usd', 0))}")
     abertas = estado.get("posicoes", [])
     print(f"   posições ainda ABERTAS agora: {len(abertas)}")
+    if abertas:
+        print("   detalhe das abertas:")
+        for p in abertas:
+            entrada = p.get("entry_price") or 0
+            pico = p.get("preco_pico") or entrada
+            pico_pct = ((pico / entrada - 1.0) * 100.0) if entrada else 0.0
+            nome = (p.get("name") or "?")[:20]
+            canal = p.get("canal", "normal")
+            idade_min = (time.time() - p.get("opened_at", time.time())) / 60.0
+            print(f"        {nome:20} | pl {p.get('pl_pct', 0):+6.1f}% | "
+                  f"pico +{pico_pct:5.1f}% | liq.compra ${p.get('liquidez_usd') or 0:,.0f} "
+                  f"-> liq.atual ${p.get('liquidez_atual') or 0:,.0f} | "
+                  f"canal={canal} | há {idade_min:.0f}min")
 
     # ---------- 4) WIN RATE / P/L ----------
     print("\n" + "-" * 62)
