@@ -18,18 +18,21 @@ rpc_limiter = RateLimiter(CFG.rpc_max_req_por_segundo)
 _TIMEOUT = 12
 
 
-def _rpc_call(method: str, params: list) -> dict | None:
+def _rpc_call(method: str, params: list) -> tuple[dict | None, str]:
+    """Devolve (json | None, motivo). motivo descreve a falha quando json é None."""
     if not CFG.solana_rpc_url:
-        return None
+        return None, "SOLANA_RPC_URL não configurada"
     payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
     try:
         rpc_limiter.acquire()  # respeita N pedidos/segundo
         resp = requests.post(CFG.solana_rpc_url, json=payload, timeout=_TIMEOUT)
+        if resp.status_code == 429:
+            return None, "limite Helius atingido (HTTP 429 — vê os créditos/rate no dashboard)"
         if resp.status_code != 200:
-            return None
-        return resp.json()
-    except Exception:
-        return None
+            return None, f"HTTP {resp.status_code} do RPC"
+        return resp.json(), "ok"
+    except Exception as exc:
+        return None, f"falha de rede/RPC: {type(exc).__name__}"
 
 
 def check_mint_authorities(mint: str) -> dict:
@@ -59,12 +62,12 @@ def check_mint_authorities(mint: str) -> dict:
         resultado["motivo"] = "SOLANA_RPC_URL não configurada (fail-closed)"
         return resultado
 
-    data = _rpc_call(
+    data, motivo = _rpc_call(
         "getAccountInfo",
         [mint, {"encoding": "jsonParsed", "commitment": "confirmed"}],
     )
     if data is None:
-        resultado["motivo"] = "falha de rede/RPC (fail-closed)"
+        resultado["motivo"] = f"{motivo} (fail-closed)"
         return resultado
     if "error" in data:
         resultado["motivo"] = f"erro RPC: {data['error']}"
