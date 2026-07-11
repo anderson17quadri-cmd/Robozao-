@@ -171,12 +171,20 @@ def verificar_posicoes() -> None:
         pico = pos.get("preco_pico") or pos["entry_price"]
         gatilho_trailing = pico * (1.0 - CFG.trailing_stop_pct / 100.0) if pico else 0.0
 
+        # timeout só se aplica aos que NÃO se mexeram. Se o pico já passou o limiar
+        # de isenção (ex: +50%), a posição vira "runner" e fica só com o trailing.
+        pico_pct = ((pico / pos["entry_price"] - 1.0) * 100.0) if pos["entry_price"] else 0.0
+        timeout_ativo = (
+            CFG.timeout_minutos and CFG.timeout_minutos > 0
+            and pico_pct < CFG.timeout_isento_acima_pct
+        )
+
         motivo = None
         if alvo_tp and alvo_tp > 0 and pl_pct >= alvo_tp:
             motivo = "take_profit"
         elif gatilho_trailing and preco <= gatilho_trailing:
             motivo = "trailing_stop"
-        elif CFG.timeout_minutos and CFG.timeout_minutos > 0 and idade_min >= CFG.timeout_minutos:
+        elif timeout_ativo and idade_min >= CFG.timeout_minutos:
             motivo = "timeout"
 
         if motivo:

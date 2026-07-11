@@ -85,6 +85,9 @@ class Config:
     trailing_stop_pct: float = 30.0
     stop_loss_pct: float = 25.0   # LEGADO: já não é usado (substituído pelo trailing)
     timeout_minutos: float = 10.0   # 0 = SEM timeout (só sai pelo trailing)
+    # posições cujo PICO já passou este ganho ficam ISENTAS do timeout (são "runners"
+    # e passam a ser geridas só pelo trailing). 0 = timeout aplica-se a todas.
+    timeout_isento_acima_pct: float = 50.0
     intervalo_verificacao_segundos: int = 5   # verifica posições mais depressa (era 15)
 
     # --- Tamanho / saldos --- (o saldo é uma unidade virtual; símbolo configurável)
@@ -155,6 +158,7 @@ def load_config() -> Config:
         trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
+        timeout_isento_acima_pct=_get_float("TIMEOUT_ISENTO_ACIMA_PCT", 50.0),
         intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 5),
         max_trade_usd=_get_float("MAX_TRADE_USD", 2.0),
         saldo_virtual_inicial=_get_float("SALDO_VIRTUAL_INICIAL", 1000.0),

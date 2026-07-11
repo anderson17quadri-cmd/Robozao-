@@ -41,6 +41,7 @@ def _modo_info() -> dict:
         "trailing_stop_pct": CFG.trailing_stop_pct,
         "stop_loss_pct": CFG.stop_loss_pct,
         "timeout_minutos": CFG.timeout_minutos,
+        "timeout_isento_acima_pct": CFG.timeout_isento_acima_pct,
         "liquidez_minima_usd": CFG.liquidez_minima_usd,
         "marketcap_minimo_usd": CFG.marketcap_minimo_usd,
         "max_trade_usd": CFG.max_trade_usd,
