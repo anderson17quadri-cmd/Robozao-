@@ -97,6 +97,7 @@ def _executar_compra(pool, amount_usd, preco, seg):
                                   amount_usd=amount_usd, tokens=tokens_humanos)
         log_event(CFG.log_file, "compra", modo="REAL", mint=mint, name=nome,
                   amount_usd=amount_usd, entry_price=preco,
+                  liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
                   signature=res["signature"], pos_id=pos["id"],
                   seguranca=seg["motivo"])
     else:
@@ -106,8 +107,9 @@ def _executar_compra(pool, amount_usd, preco, seg):
                                   name=nome, entry_price=preco,
                                   amount_usd=amount_usd, tokens=tokens)
         log_event(CFG.log_file, "compra", modo="DRY_RUN", mint=mint, name=nome,
-                  amount_usd=amount_usd, entry_price=preco, pos_id=pos["id"],
-                  seguranca=seg["motivo"])
+                  amount_usd=amount_usd, entry_price=preco,
+                  liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
+                  pos_id=pos["id"], seguranca=seg["motivo"])
 
 
 def verificar_posicoes() -> None:

@@ -79,7 +79,7 @@ class Config:
     take_profit_pct: float = 50.0
     stop_loss_pct: float = 25.0
     timeout_minutos: float = 10.0
-    intervalo_verificacao_segundos: int = 15
+    intervalo_verificacao_segundos: int = 5   # verifica posições mais depressa (era 15)
 
     # --- Tamanho / saldos --- (o saldo é uma unidade virtual; símbolo configurável)
     max_trade_usd: float = 2.0
@@ -144,7 +144,7 @@ def load_config() -> Config:
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 50.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
-        intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 15),
+        intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 5),
         max_trade_usd=_get_float("MAX_TRADE_USD", 2.0),
         saldo_virtual_inicial=_get_float("SALDO_VIRTUAL_INICIAL", 1000.0),
         max_posicoes_abertas=_get_int("MAX_POSICOES_ABERTAS", 10),

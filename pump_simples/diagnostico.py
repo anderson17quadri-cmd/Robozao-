@@ -14,6 +14,7 @@ Uso:
 """
 
 import json
+import statistics
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -192,7 +193,85 @@ def main():
         print(f"   só a fonte '{f}' foi usada. Para comparar, muda FONTE_DETECCAO")
         print("   no .env e corre um período com cada uma.")
 
+    # ---------- 6) PADRÃO: ganhadores vs perdedores ----------
+    _analise_padroes(compras, vendas)
+
     print("\n" + "=" * 62)
+
+
+def _mediana(valores):
+    vals = [v for v in valores if v is not None]
+    return statistics.median(vals) if vals else None
+
+
+def _analise_padroes(compras: list[dict], vendas: list[dict]):
+    print("\n" + "-" * 62)
+    print("6) PADRÃO — quem subiu vs quem caiu")
+
+    # junta compra<->venda pelo pos_id (features da compra + resultado da venda)
+    compra_por_id = {c.get("pos_id"): c for c in compras if c.get("pos_id")}
+    trades = []
+    for v in vendas:
+        c = compra_por_id.get(v.get("pos_id"))
+        if not c:
+            continue
+        hold = None
+        if v.get("epoch") and c.get("epoch"):
+            hold = max(0.0, v["epoch"] - c["epoch"])
+        trades.append({
+            "pl_pct": v.get("pl_pct") or 0.0,
+            "entry_price": c.get("entry_price"),
+            "liquidez": c.get("liquidez_usd"),   # só existe em compras recentes
+            "hold_min": (hold / 60.0) if hold is not None else None,
+        })
+
+    if not trades:
+        print("   sem trades emparelháveis (compra+venda) no log ainda.")
+        return
+
+    # distribuição de resultados (a "forma" do que acontece)
+    faixas = {"rug forte (< -50%)": 0, "perda (-50% a -10%)": 0,
+              "neutro (-10% a +10%)": 0, "ganho (+10% a +50%)": 0, "moon (> +50%)": 0}
+    for t in trades:
+        p = t["pl_pct"]
+        if p < -50: faixas["rug forte (< -50%)"] += 1
+        elif p < -10: faixas["perda (-50% a -10%)"] += 1
+        elif p <= 10: faixas["neutro (-10% a +10%)"] += 1
+        elif p <= 50: faixas["ganho (+10% a +50%)"] += 1
+        else: faixas["moon (> +50%)"] += 1
+    n = len(trades)
+    print(f"   distribuição de {n} trades:")
+    for faixa, q in faixas.items():
+        barra = "█" * round(q / n * 30)
+        print(f"      {faixa:22} {q:4}  {barra}")
+
+    # compara features: quem CAIU muito vs quem SUBIU muito
+    cairam = [t for t in trades if t["pl_pct"] <= -40]
+    subiram = [t for t in trades if t["pl_pct"] >= 40]
+
+    def _linha(rotulo, grupo):
+        if not grupo:
+            print(f"   {rotulo}: (nenhum)")
+            return
+        ep = _mediana([t["entry_price"] for t in grupo])
+        lq = _mediana([t["liquidez"] for t in grupo])
+        hd = _mediana([t["hold_min"] for t in grupo])
+        ep_s = f"${ep:.8f}" if ep else "—"
+        lq_s = f"${lq:,.0f}" if lq else "s/ dados"
+        hd_s = f"{hd:.1f} min" if hd is not None else "—"
+        print(f"   {rotulo} ({len(grupo)}): preço entrada med {ep_s} | "
+              f"liquidez med {lq_s} | tempo até sair med {hd_s}")
+
+    print("   comparação (mediana de cada grupo):")
+    _linha("↓ caíram >40%", cairam)
+    _linha("↑ subiram >40%", subiram)
+
+    com_liq = sum(1 for t in trades if t["liquidez"] is not None)
+    if com_liq == 0:
+        print("   ⚠️  liquidez à COMPRA ainda não está no log (ativada agora).")
+        print("       Corre um novo período para poder comparar liquidez de quem sobe/cai.")
+    else:
+        print(f"   (liquidez à compra disponível em {com_liq}/{n} trades)")
 
 
 def _resumo_estado(estado: dict):
