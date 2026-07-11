@@ -22,9 +22,12 @@ from logjsonl import log_event
 from solana_rpc import check_mint_authorities
 from state import STATE
 
+# supply padrão de um token pump.fun (1e9). Usado para estimar o market cap.
+PUMP_SUPPLY_ESTIMADO = 1_000_000_000
+
 
 def avaliar_e_comprar(pool: dict) -> None:
-    """Aplica as 3 regras de entrada a um pool candidato."""
+    """Aplica as regras de entrada a um pool candidato."""
     mint = pool.get("mint", "")
     nome = pool.get("name", "?")
     preco = pool.get("price_usd")
@@ -34,8 +37,8 @@ def avaliar_e_comprar(pool: dict) -> None:
     if STATE.tem_posicao_para_mint(mint):
         return
 
-    # limite de posições abertas em simultâneo
-    if len(STATE.posicoes) >= CFG.max_posicoes_abertas:
+    # limite de posições abertas (0 = SEM limite; fica limitado só pelo saldo)
+    if CFG.max_posicoes_abertas > 0 and len(STATE.posicoes) >= CFG.max_posicoes_abertas:
         return
 
     # --- Regra 3: liquidez mínima (barata, verifica primeiro) ---
@@ -49,6 +52,18 @@ def avaliar_e_comprar(pool: dict) -> None:
         log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                   motivo="sem_preco")
         return
+
+    # --- Regra 4: market cap mínimo à entrada (0 = desligado) ---
+    # pump.fun tem ~1e9 de supply => market cap ≈ preço * 1e9.
+    # Os dados mostraram que tokens comprados a mcap baixo (~$3k) rugam;
+    # os que sobem entraram a ~$20k. Este filtro corta os "cedo demais".
+    if CFG.marketcap_minimo_usd > 0:
+        marketcap = preco * PUMP_SUPPLY_ESTIMADO
+        if marketcap < CFG.marketcap_minimo_usd:
+            log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
+                      motivo="marketcap_baixo", marketcap_usd=marketcap,
+                      minimo=CFG.marketcap_minimo_usd, preco=preco)
+            return
 
     # --- Regra 2: autoridades revogadas (fail-closed) ---
     seg = check_mint_authorities(mint)

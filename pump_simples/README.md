@@ -92,11 +92,20 @@ tinhas corrido antes, o saldo não aparecia nos 1000 — carregava o estado anti
 
 ## Quantos tokens o bot compra
 
-- **`MAX_POSICOES_ABERTAS`** (default 10) — nº de posições abertas em simultâneo.
-  Ao atingir o limite, o bot só compra mais depois de vender alguma.
-- **`MAX_TRADE_USD`** (default 2) — quanto entra em cada posição.
-- O bot também só compra tokens que passem as 3 regras (pump.fun + autoridades
-  revogadas + liquidez mínima), por isso nem todos os detetados viram compra.
+- **`MAX_POSICOES_ABERTAS`** (default **0 = sem limite**) — nº de posições abertas
+  em simultâneo. Com 0, o bot compra toda a oportunidade que passe as regras,
+  ficando limitado só pelo saldo / `MAX_TRADE_USD`.
+- **`MAX_TRADE_USD`** (default 2) — quanto entra em cada posição (editável no dashboard).
+- **`MARKETCAP_MINIMO_USD`** (default **10000**, 0 = desligado) — market cap mínimo à
+  entrada (`≈ preço × 1e9`). Regra extra baseada nos dados reais: tokens comprados
+  a mcap baixo (~$3k) tendiam a *rugar*; os que subiam entravam a ~$20k.
+- O bot também só compra tokens que passem as regras de segurança (pump.fun +
+  autoridades revogadas + liquidez mínima), por isso nem todos os detetados viram compra.
+
+> ⚠️ Com `MAX_POSICOES_ABERTAS=0` e muitas posições abertas, a monitorização de
+> preços faz muitas chamadas à GeckoTerminal (free-tier). O `GECKO_MAX_REQ_POR_SEGUNDO`
+> trava-as para não haver 429, mas com dezenas de posições os preços podem atualizar
+> mais devagar que o `INTERVALO_VERIFICACAO_SEGUNDOS`.
 
 ## ⚠️ Aviso importante — wallet partilhada
 
