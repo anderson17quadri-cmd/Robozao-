@@ -157,6 +157,9 @@
     if (document.activeElement !== ti && state.max_trade_usd !== undefined) {
       ti.value = state.max_trade_usd;
     }
+    // rodapé "trade máx" ao vivo (reflete o valor guardado, não o do .env)
+    const ft = $("footTrade");
+    if (ft && state.max_trade_usd !== undefined) ft.textContent = SIM + Number(state.max_trade_usd).toFixed(0);
   }
 
   async function poll() {
@@ -237,22 +240,28 @@
   }
 
   async function salvarValorEntrada() {
-    const v = $("tradeInput").value.trim();
-    if (v === "" || Number(v) <= 0) return;
+    // aceita vírgula decimal (PT): "2,5" -> "2.5"
+    const v = $("tradeInput").value.trim().replace(",", ".");
+    const n = Number(v);
+    if (v === "" || isNaN(n) || n <= 0) return;
+    const btn = $("tradeSave");
     try {
-      await fetch("/api/config", {
+      const r = await fetch("/api/config", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ max_trade_usd: v }),
       });
+      if (btn) { btn.textContent = r.ok ? "✓" : "erro"; setTimeout(() => { btn.textContent = "ok"; }, 1200); }
       $("tradeInput").blur();
       await poll();
-    } catch (e) { /* ignora */ }
+    } catch (e) { if (btn) btn.textContent = "erro"; }
   }
 
   // ---------- eventos ----------
   $("toggleBtn").addEventListener("click", () => toggle(false));
   $("resetBtn").addEventListener("click", reiniciar);
   $("tradeSave").addEventListener("click", salvarValorEntrada);
+  // grava também ao sair do campo (não precisas de carregar no "ok")
+  $("tradeInput").addEventListener("change", salvarValorEntrada);
   $("tradeInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") salvarValorEntrada();
   });

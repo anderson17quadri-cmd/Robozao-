@@ -181,6 +181,8 @@ class AppState:
     def set_max_trade(self, valor) -> bool:
         """Define o valor de cada entrada (persiste). Devolve False se inválido."""
         try:
+            if isinstance(valor, str):
+                valor = valor.strip().replace(",", ".")  # aceita vírgula decimal
             v = float(valor)
         except (TypeError, ValueError):
             return False
