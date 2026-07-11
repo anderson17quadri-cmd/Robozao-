@@ -198,41 +198,54 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
 def verificar_posicoes() -> None:
     """Aplica as regras de saída a cada posição aberta."""
     for pos in list(STATE.posicoes):
-        preco = gecko.get_pool_price(pos["pool_address"])
+        info = gecko.get_pool_info(pos["pool_address"])
+        preco = info.get("price_usd") if info else None
         if preco is None or preco <= 0:
             # sem preço => não decide nada agora (não vende às cegas)
             continue
+        liquidez_atual = info.get("liquidity_usd") if info else None
 
-        STATE.atualizar_preco(pos["id"], preco)  # também atualiza o pico
+        STATE.atualizar_preco(pos["id"], preco, liquidez_atual)  # também atualiza o pico
         pl_pct = (preco / pos["entry_price"] - 1.0) * 100.0 if pos["entry_price"] else 0.0
         idade_min = (time.time() - pos["opened_at"]) / 60.0
 
-        # meta de lucro (take-profit): OPCIONAL. Usa a custom da posição se definida,
-        # senão o global do .env. Se ambos forem 0, NÃO há meta para cima — o pico
-        # corre livremente e só o trailing gere a subida.
-        meta = pos.get("meta_lucro_pct")
-        alvo_tp = meta if (meta is not None and meta > 0) else CFG.take_profit_pct
-
-        # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO.
-        # (quando o pico ainda ≈ entrada, isto age como stop-loss desde a compra)
-        pico = pos.get("preco_pico") or pos["entry_price"]
-        gatilho_trailing = pico * (1.0 - CFG.trailing_stop_pct / 100.0) if pico else 0.0
-
-        # timeout só se aplica aos que NÃO se mexeram. Se o pico já passou o limiar
-        # de isenção (ex: +50%), a posição vira "runner" e fica só com o trailing.
-        pico_pct = ((pico / pos["entry_price"] - 1.0) * 100.0) if pos["entry_price"] else 0.0
-        timeout_ativo = (
-            CFG.timeout_minutos and CFG.timeout_minutos > 0
-            and pico_pct < CFG.timeout_isento_acima_pct
-        )
-
+        # --- Proteção contra colapso de liquidez (prioridade máxima) ---
+        # Se a liquidez sumiu desde a compra, o preço da AMM deixa de ser fiável
+        # (pode não haver ninguém do outro lado). Vende já, ignora as outras regras.
         motivo = None
-        if alvo_tp and alvo_tp > 0 and pl_pct >= alvo_tp:
-            motivo = "take_profit"
-        elif gatilho_trailing and preco <= gatilho_trailing:
-            motivo = "trailing_stop"
-        elif timeout_ativo and idade_min >= CFG.timeout_minutos:
-            motivo = "timeout"
+        liq_compra = pos.get("liquidez_usd")
+        if (CFG.liquidez_queda_venda_pct > 0 and liquidez_atual is not None
+                and liq_compra and liq_compra > 0):
+            queda_pct = (1.0 - liquidez_atual / liq_compra) * 100.0
+            if queda_pct >= CFG.liquidez_queda_venda_pct:
+                motivo = "liquidez_colapsou"
+
+        if motivo is None:
+            # meta de lucro (take-profit): OPCIONAL. Usa a custom da posição se definida,
+            # senão o global do .env. Se ambos forem 0, NÃO há meta para cima — o pico
+            # corre livremente e só o trailing gere a subida.
+            meta = pos.get("meta_lucro_pct")
+            alvo_tp = meta if (meta is not None and meta > 0) else CFG.take_profit_pct
+
+            # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO.
+            # (quando o pico ainda ≈ entrada, isto age como stop-loss desde a compra)
+            pico = pos.get("preco_pico") or pos["entry_price"]
+            gatilho_trailing = pico * (1.0 - CFG.trailing_stop_pct / 100.0) if pico else 0.0
+
+            # timeout só se aplica aos que NÃO se mexeram. Se o pico já passou o limiar
+            # de isenção (ex: +50%), a posição vira "runner" e fica só com o trailing.
+            pico_pct = ((pico / pos["entry_price"] - 1.0) * 100.0) if pos["entry_price"] else 0.0
+            timeout_ativo = (
+                CFG.timeout_minutos and CFG.timeout_minutos > 0
+                and pico_pct < CFG.timeout_isento_acima_pct
+            )
+
+            if alvo_tp and alvo_tp > 0 and pl_pct >= alvo_tp:
+                motivo = "take_profit"
+            elif gatilho_trailing and preco <= gatilho_trailing:
+                motivo = "trailing_stop"
+            elif timeout_ativo and idade_min >= CFG.timeout_minutos:
+                motivo = "timeout"
 
         if motivo:
             _executar_venda(pos, preco, motivo)
@@ -332,8 +345,13 @@ def _executar_venda(pos, preco, motivo):
                   signature=res["signature"], pos_id=pos["id"])
     else:
         # DRY_RUN — aplica slippage: enches a venda mais barato que a cotação.
+        # Usa a liquidez ATUAL (não a da compra) — se colapsou entretanto, o
+        # slippage simulado tem de refletir isso (senão fica otimista demais).
         valor_bruto = (pos.get("tokens") or 0.0) * preco   # tamanho da venda em USD
-        slip = _slippage_fracao(valor_bruto, pos.get("liquidez_usd"))
+        liquidez_para_slippage = pos.get("liquidez_atual")
+        if liquidez_para_slippage is None:
+            liquidez_para_slippage = pos.get("liquidez_usd")
+        slip = _slippage_fracao(valor_bruto, liquidez_para_slippage)
         exit_efetivo = preco * (1.0 - slip)
         fechado = STATE.fechar_posicao(pos["id"], preco_saida=exit_efetivo, motivo=motivo)
         log_event(CFG.log_file, "venda", modo="DRY_RUN", mint=pos["mint"],

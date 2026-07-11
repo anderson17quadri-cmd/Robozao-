@@ -81,7 +81,8 @@ class AppState:
                 "preco_pico": entry_price,   # pico desde a compra (para o trailing stop)
                 "amount_usd": amount_usd,
                 "tokens": tokens,
-                "liquidez_usd": liquidez_usd,   # liquidez à compra (p/ slippage de venda)
+                "liquidez_usd": liquidez_usd,   # liquidez à COMPRA (referência p/ detetar colapso)
+                "liquidez_atual": liquidez_usd, # liquidez mais recente (atualizada a cada verificação)
                 # hype à compra (mostrado no card do dashboard)
                 "buyers_h1": buyers_h1,
                 "volume_h1": volume_h1,
@@ -114,7 +115,7 @@ class AppState:
             p = next((x for x in self.posicoes if x["id"] == pos_id), None)
             return dict(p) if p else None
 
-    def atualizar_preco(self, pos_id, preco):
+    def atualizar_preco(self, pos_id, preco, liquidez_atual=None):
         with self._lock:
             for p in self.posicoes:
                 if p["id"] == pos_id:
@@ -125,6 +126,8 @@ class AppState:
                     if p["entry_price"]:
                         p["pl_pct"] = (preco / p["entry_price"] - 1.0) * 100.0
                         p["pl_usd"] = p["amount_usd"] * (p["pl_pct"] / 100.0)
+                    if liquidez_atual is not None:
+                        p["liquidez_atual"] = liquidez_atual
                     break
             self._save_locked()
 

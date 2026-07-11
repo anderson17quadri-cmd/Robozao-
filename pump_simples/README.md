@@ -22,6 +22,12 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 3. Liquidez ≥ `LIQUIDEZ_MINIMA_USD` (default $1000).
 
 ### Regras de saída (o que disparar primeiro, vence)
+- **Colapso de liquidez (prioridade máxima):** se a liquidez cair
+  `LIQUIDEZ_QUEDA_VENDA_PCT%` (default 70%) desde a compra, vende **já**,
+  ignorando todas as regras abaixo. Quando um pool graduado (ex: PumpSwap) tem
+  a liquidez removida, o preço da AMM deixa de ser fiável — pode não haver
+  ninguém do outro lado para negociar a sério. Motivo no log:
+  `liquidez_colapsou`. `0` = desligado.
 - **Trailing stop (saída principal):** deixa o **pico** correr (só sobe) e vende
   tudo se cair `TRAILING_STOP_PCT%` (default 30%) desde esse pico — não desde a
   compra. Quando o token nunca sobe acima da entrada, age como stop-loss.
@@ -30,7 +36,8 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
   por posição no dashboard, ou pôr um `TAKE_PROFIT_PCT` global se quiseres um teto.
 - **Timeout:** vende tudo passados `TIMEOUT_MINUTOS` (default 10 min; `0` = sem timeout).
 - `STOP_LOSS_PCT` ficou **legado** (substituído pelo trailing).
-- Verificação a cada `INTERVALO_VERIFICACAO_SEGUNDOS` (default 5s).
+- Verificação a cada `INTERVALO_VERIFICACAO_SEGUNDOS` (default 5s) — cada
+  verificação já lê preço E liquidez na mesma chamada (sem custo extra de rede).
 
 ### Slippage simulado (só DRY_RUN)
 Para o P/L simulado ser mais realista, cada compra/venda em DRY_RUN sofre um

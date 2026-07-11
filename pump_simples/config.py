@@ -128,6 +128,13 @@ class Config:
     acompanhar_vendidos_max: int = 20        # quantos tokens já vendidos seguir
     intervalo_acompanhar_vendidos_segundos: int = 60
 
+    # --- Proteção contra colapso de liquidez ---
+    # Se a liquidez cair esta % (ou mais) desde a COMPRA, vende imediatamente,
+    # independentemente do preço — o preço de uma pool quase sem liquidez não é
+    # fiável (pode não haver ninguém do outro lado para vender a sério).
+    # 0 = desligado.
+    liquidez_queda_venda_pct: float = 70.0
+
     # --- Dashboard ---
     dashboard_host: str = "0.0.0.0"
     dashboard_port: int = 5000
@@ -196,6 +203,7 @@ def load_config() -> Config:
         acompanhar_vendidos_max=_get_int("ACOMPANHAR_VENDIDOS_MAX", 20),
         intervalo_acompanhar_vendidos_segundos=_get_int(
             "INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS", 60),
+        liquidez_queda_venda_pct=_get_float("LIQUIDEZ_QUEDA_VENDA_PCT", 70.0),
         dashboard_host=_get("DASHBOARD_HOST", "0.0.0.0"),
         dashboard_port=_get_int("DASHBOARD_PORT", 5000),
     )
