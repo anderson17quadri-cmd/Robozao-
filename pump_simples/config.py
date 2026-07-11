@@ -78,7 +78,7 @@ class Config:
 
     # --- Regras de saída ---
     take_profit_pct: float = 50.0
-    stop_loss_pct: float = 40.0   # alargado (era 25): evita vender em dips que recuperam
+    stop_loss_pct: float = 25.0   # dados (secção 7): stops apanham rugs reais que NÃO recuperam
     timeout_minutos: float = 10.0
     intervalo_verificacao_segundos: int = 5   # verifica posições mais depressa (era 15)
 
@@ -144,7 +144,7 @@ def load_config() -> Config:
         liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 1000.0),
         marketcap_minimo_usd=_get_float("MARKETCAP_MINIMO_USD", 10000.0),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 50.0),
-        stop_loss_pct=_get_float("STOP_LOSS_PCT", 40.0),
+        stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
         intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 5),
         max_trade_usd=_get_float("MAX_TRADE_USD", 2.0),
