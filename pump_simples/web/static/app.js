@@ -110,11 +110,10 @@
           ${mintRow(p.mint)}
           ${hypeBadge(p)}
         </div>
-        <div class="pl ${cls}">${fmtPct(p.pl_pct)}</div>
+        <div class="pl ${cls}">${fmtPct(p.pl_pct)}<span class="pl-money">${fmtUsd(p.pl_usd)}</span></div>
         <div class="meta">
           <span>entrada ${fmtPrice(p.entry_price)}</span>
           <span>agora ${fmtPrice(p.current_price)}</span>
-          <span>${fmtUsd(p.pl_usd)}</span>
           <span>há ${ago(p.opened_at)}</span>
         </div>
         <div class="actions">
@@ -146,11 +145,10 @@
           ${mintRow(h.mint)}
           ${hypeBadge(h)}
         </div>
-        <div class="pl ${cls}">${fmtPct(h.pl_pct)}</div>
+        <div class="pl ${cls}">${fmtPct(h.pl_pct)}<span class="pl-money">${fmtUsd(h.pl_usd)}</span></div>
         <div class="meta">
           <span>entrada ${fmtPrice(h.entry_price)}</span>
           <span>saída ${fmtPrice(h.exit_price)}</span>
-          <span>${fmtUsd(h.pl_usd)}</span>
         </div>
         ${temPos ? `
         <div class="postsale ${posCls}">
