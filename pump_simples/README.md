@@ -14,7 +14,7 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 - **Deteta** tokens novos pump.fun. Fonte **alternável** por config `FONTE_DETECCAO` (só uma ativa de cada vez), todas com o mesmo formato de saída — ver [Fontes de deteção](#fontes-de-deteção).
 - **Verifica segurança** via RPC Solana (Helius): `getAccountInfo` (`jsonParsed`) para confirmar que `mintAuthority` **e** `freezeAuthority` estão **ambos revogados (None)**.
 - **Compra/vende** (simulado por default; real via [Jupiter](https://station.jup.ag/docs/apis/swap-api) quando ativado).
-- **Dashboard web** com estética pump.fun (saldo, posições em tempo real, histórico, toggle liga/desliga).
+- **Dashboard web** com estética pump.fun: saldo, posições em tempo real, histórico, toggle liga/desliga, **venda manual** por posição, **meta de lucro editável por posição**, **links para o pump.fun** e **acompanhamento pós-venda** (ver [Dashboard](#dashboard--ações)).
 
 ### Regras de entrada (só 3, todas obrigatórias)
 1. Token é pump.fun.
@@ -52,6 +52,33 @@ Para `bitquery`, mete no `.env`:
 FONTE_DETECCAO=bitquery
 BITQUERY_API_KEY=a-tua-key   # cadastro grátis em bitquery.io
 ```
+
+## Dashboard — ações
+
+Além de mostrar saldo/posições/histórico, o dashboard permite:
+
+- **Vender 100% (manual)** — botão por posição aberta. Usa o mesmo caminho da
+  venda automática (Jupiter em real, simulado em DRY_RUN). Pede confirmação antes
+  de executar; em modo REAL a confirmação é reforçada.
+- **Meta de lucro por posição** — campo "meta venda %" editável em cada posição.
+  Se definida, aquela posição vende ao atingir essa % em vez do `TAKE_PROFIT_PCT`
+  global. Vazio/0 => volta ao global. O stop-loss e o timeout continuam globais.
+- **Link para o pump.fun** — o nome de cada token (posições e histórico) abre
+  `https://pump.fun/coin/{mint}` numa nova aba.
+- **Acompanhamento pós-venda** — depois de vender, o token continua no histórico
+  marcado como **"já vendido"** e o bot continua a ler o preço dele (só leitura,
+  sem trades) mostrando a variação **desde a venda**. Segue os últimos
+  `ACOMPANHAR_VENDIDOS_MAX` (default 20), a cada
+  `INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS` (default 60s). Não afeta saldo.
+
+## Moeda
+
+Todo o sistema trabalha em **USD** — é a moeda em que a GeckoTerminal e a Jupiter
+devolvem preços/liquidez. `SALDO_VIRTUAL_INICIAL`, `MAX_TRADE_USD`, etc. são USD.
+Não há conversão para EUR: suportar moeda configurável exigiria uma camada de
+câmbio (FX) em todos os valores mostrados/calculados — não vale a pena para um bot
+de teste. Se quiseres raciocinar em EUR, ajusta os valores mentalmente (≈ multiplica
+por ~0,9).
 
 ## ⚠️ Aviso importante — wallet partilhada
 

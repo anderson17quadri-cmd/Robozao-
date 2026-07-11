@@ -55,7 +55,7 @@ class AppState:
 
     # ---------- operações ----------
     def abrir_posicao(self, *, mint, pool_address, name, entry_price,
-                      amount_usd, tokens) -> dict:
+                      amount_usd, tokens, meta_lucro_pct=None) -> dict:
         with self._lock:
             pos = {
                 "id": uuid.uuid4().hex[:8],
@@ -69,12 +69,29 @@ class AppState:
                 "opened_at": time.time(),
                 "pl_pct": 0.0,
                 "pl_usd": 0.0,
+                # meta de venda custom desta posição (% de lucro). None => usa o global.
+                "meta_lucro_pct": meta_lucro_pct,
                 "status": "aberta",
             }
             self.saldo_usd -= amount_usd
             self.posicoes.append(pos)
             self._save_locked()
             return pos
+
+    def set_meta_lucro(self, pos_id, pct) -> bool:
+        """Define/limpa a meta de lucro custom de uma posição aberta. pct None => limpa."""
+        with self._lock:
+            for p in self.posicoes:
+                if p["id"] == pos_id:
+                    p["meta_lucro_pct"] = pct
+                    self._save_locked()
+                    return True
+            return False
+
+    def get_posicao(self, pos_id) -> dict | None:
+        with self._lock:
+            p = next((x for x in self.posicoes if x["id"] == pos_id), None)
+            return dict(p) if p else None
 
     def atualizar_preco(self, pos_id, preco):
         with self._lock:
@@ -111,10 +128,33 @@ class AppState:
                 "pl_pct": pl_pct,
                 "motivo_saida": motivo,
                 "status": "fechada",
+                # acompanhamento pós-venda (só leitura; não afeta saldo)
+                "preco_pos_venda": preco_saida,
+                "var_pos_venda_pct": 0.0,
+                "pos_venda_atualizado_em": time.time(),
             }
             self.historico.insert(0, fechado)
             self._save_locked()
             return fechado
+
+    def atualizar_preco_vendido(self, trade_id, preco):
+        """Atualiza o preço atual de um trade JÁ FECHADO (acompanhamento pós-venda).
+        Só leitura de mercado — nunca mexe no saldo nem reabre posição."""
+        with self._lock:
+            for h in self.historico:
+                if h.get("id") == trade_id:
+                    h["preco_pos_venda"] = preco
+                    base = h.get("exit_price")
+                    if base:
+                        h["var_pos_venda_pct"] = (preco / base - 1.0) * 100.0
+                    h["pos_venda_atualizado_em"] = time.time()
+                    break
+            self._save_locked()
+
+    def trades_para_acompanhar(self, limite) -> list[dict]:
+        """Cópia dos últimos `limite` trades fechados (para reavaliar o preço)."""
+        with self._lock:
+            return [dict(h) for h in self.historico[:limite]]
 
     def tem_posicao_para_mint(self, mint) -> bool:
         with self._lock:

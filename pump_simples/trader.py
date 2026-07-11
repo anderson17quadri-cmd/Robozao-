@@ -121,8 +121,12 @@ def verificar_posicoes() -> None:
         pl_pct = (preco / pos["entry_price"] - 1.0) * 100.0 if pos["entry_price"] else 0.0
         idade_min = (time.time() - pos["opened_at"]) / 60.0
 
+        # meta de lucro: usa a custom da posição se definida, senão o global do .env
+        meta = pos.get("meta_lucro_pct")
+        alvo_tp = meta if (meta is not None and meta > 0) else CFG.take_profit_pct
+
         motivo = None
-        if pl_pct >= CFG.take_profit_pct:
+        if pl_pct >= alvo_tp:
             motivo = "take_profit"
         elif pl_pct <= -CFG.stop_loss_pct:
             motivo = "stop_loss"
@@ -131,6 +135,40 @@ def verificar_posicoes() -> None:
 
         if motivo:
             _executar_venda(pos, preco, motivo)
+
+
+def vender_manual(pos_id: str) -> dict:
+    """
+    Venda manual imediata de 100% da posição, pelo MESMO caminho da venda
+    automática (Jupiter em real, simulado em DRY_RUN). Devolve {ok, motivo}.
+    """
+    pos = STATE.get_posicao(pos_id)
+    if pos is None:
+        return {"ok": False, "motivo": "posição não encontrada"}
+
+    preco = gecko.get_pool_price(pos["pool_address"])
+    if preco is None or preco <= 0:
+        # sem preço fiável: em DRY_RUN caímos no preço de entrada para não falhar;
+        # em real, sem preço não arriscamos — a swap decide pela cotação Jupiter.
+        preco = pos.get("current_price") or pos.get("entry_price")
+    if not preco or preco <= 0:
+        return {"ok": False, "motivo": "sem preço para vender"}
+
+    _executar_venda(pos, preco, "manual")
+    return {"ok": True, "motivo": "venda manual executada"}
+
+
+def acompanhar_vendidos() -> None:
+    """
+    Acompanhamento pós-venda: reavalia o preço dos últimos N tokens JÁ VENDIDOS,
+    só para ver como evoluíram. NÃO compra, NÃO vende, NÃO mexe no saldo.
+    Reaproveita o mesmo gecko.get_pool_price das posições abertas.
+    """
+    for trade in STATE.trades_para_acompanhar(CFG.acompanhar_vendidos_max):
+        preco = gecko.get_pool_price(trade.get("pool_address", ""))
+        if preco is None or preco <= 0:
+            continue
+        STATE.atualizar_preco_vendido(trade["id"], preco)
 
 
 def _executar_venda(pos, preco, motivo):

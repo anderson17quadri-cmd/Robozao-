@@ -81,15 +81,19 @@ class Config:
     timeout_minutos: float = 10.0
     intervalo_verificacao_segundos: int = 15
 
-    # --- Tamanho / saldos ---
+    # --- Tamanho / saldos --- (moeda: USD em todo o sistema; ver README)
     max_trade_usd: float = 2.0
-    saldo_virtual_inicial: float = 50.0
+    saldo_virtual_inicial: float = 1000.0
     max_posicoes_abertas: int = 3
 
     # --- Robustez ---
     rpc_max_req_por_segundo: float = 5.0
     intervalo_scan_segundos: int = 20        # frequência de procura de tokens novos
     slippage_bps: int = 500                  # 5% — só usado em modo real
+
+    # --- Acompanhamento pós-venda (só leitura de preço, sem trades) ---
+    acompanhar_vendidos_max: int = 20        # quantos tokens já vendidos seguir
+    intervalo_acompanhar_vendidos_segundos: int = 60
 
     # --- Dashboard ---
     dashboard_host: str = "0.0.0.0"
@@ -140,11 +144,14 @@ def load_config() -> Config:
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
         intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 15),
         max_trade_usd=_get_float("MAX_TRADE_USD", 2.0),
-        saldo_virtual_inicial=_get_float("SALDO_VIRTUAL_INICIAL", 50.0),
+        saldo_virtual_inicial=_get_float("SALDO_VIRTUAL_INICIAL", 1000.0),
         max_posicoes_abertas=_get_int("MAX_POSICOES_ABERTAS", 3),
         rpc_max_req_por_segundo=_get_float("RPC_MAX_REQ_POR_SEGUNDO", 5.0),
         intervalo_scan_segundos=_get_int("INTERVALO_SCAN_SEGUNDOS", 20),
         slippage_bps=_get_int("SLIPPAGE_BPS", 500),
+        acompanhar_vendidos_max=_get_int("ACOMPANHAR_VENDIDOS_MAX", 20),
+        intervalo_acompanhar_vendidos_segundos=_get_int(
+            "INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS", 60),
         dashboard_host=_get("DASHBOARD_HOST", "0.0.0.0"),
         dashboard_port=_get_int("DASHBOARD_PORT", 5000),
     )

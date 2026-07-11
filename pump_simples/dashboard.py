@@ -80,6 +80,45 @@ def api_toggle():
         return jsonify({"ok": True, "bot_running": CONTROLLER.is_running()})
 
 
+@app.route("/api/posicao/<pos_id>/vender", methods=["POST"])
+def api_vender(pos_id):
+    """Venda manual imediata (100%) de uma posição — mesmo caminho da venda auto."""
+    body = request.get_json(silent=True) or {}
+    confirmado = bool(body.get("confirmar_real", False))
+
+    # trava de segurança: em modo REAL exige confirmação explícita
+    if CFG.envio_real_armado and not confirmado:
+        return jsonify({
+            "ok": False,
+            "precisa_confirmacao": True,
+            "aviso": "MODO REAL — esta venda envia uma transação a sério. Confirma.",
+        }), 409
+
+    import trader
+    res = trader.vender_manual(pos_id)
+    status = 200 if res["ok"] else 400
+    return jsonify(res), status
+
+
+@app.route("/api/posicao/<pos_id>/meta", methods=["POST"])
+def api_meta(pos_id):
+    """Define/limpa a meta de lucro custom (%) de uma posição aberta."""
+    body = request.get_json(silent=True) or {}
+    valor = body.get("meta_lucro_pct", None)
+
+    meta = None
+    if valor not in (None, "", "null"):
+        try:
+            meta = float(valor)
+            if meta <= 0:
+                meta = None  # <=0 => limpa (volta ao global)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "motivo": "valor inválido"}), 400
+
+    ok = STATE.set_meta_lucro(pos_id, meta)
+    return jsonify({"ok": ok, "meta_lucro_pct": meta}), (200 if ok else 404)
+
+
 def main():
     modo = "REAL ⚠️" if CFG.envio_real_armado else "DRY_RUN (simulado)"
     print("=" * 60)

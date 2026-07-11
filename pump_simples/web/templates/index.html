@@ -85,15 +85,15 @@
     <span class="sec-note">segurança: mint+freeze revogados (fail-closed)</span>
   </footer>
 
-  <!-- modal confirmação modo real -->
+  <!-- modal de confirmação (genérico: arranque real e venda manual) -->
   <div id="modal" class="modal hidden">
     <div class="modal-card">
-      <h3>⚠️ Confirmar arranque em MODO REAL</h3>
-      <p id="modalMsg">Vais gastar SOL da wallet a sério.</p>
-      <p class="modal-warn">Esta wallet é partilhada com o bot anterior. Não corras os dois em modo real ao mesmo tempo.</p>
+      <h3 id="modalTitle">⚠️ Confirmar</h3>
+      <p id="modalMsg">Tens a certeza?</p>
+      <p class="modal-warn" id="modalWarn">Esta wallet é partilhada com o bot anterior. Não corras os dois em modo real ao mesmo tempo.</p>
       <div class="modal-actions">
         <button id="modalCancel" class="btn-ghost">cancelar</button>
-        <button id="modalOk" class="btn-danger">sim, ligar em REAL</button>
+        <button id="modalOk" class="btn-danger">confirmar</button>
       </div>
     </div>
   </div>

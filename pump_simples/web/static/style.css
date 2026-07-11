@@ -133,8 +133,43 @@ body{
 .tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
   padding:2px 8px;border-radius:6px}
 .tag.take_profit{color:var(--up);background:var(--up-soft)}
-.tag.stop_loss,.tag.timeout{color:var(--down);background:var(--down-soft)}
+.tag.stop_loss,.tag.timeout,.tag.manual{color:var(--down);background:var(--down-soft)}
+.tag.manual{color:var(--amber);background:rgba(255,176,32,.13)}
 .up{color:var(--up)} .down{color:var(--down)}
+
+/* link para o pump.fun */
+.tok-link{color:var(--accent-2);text-decoration:none;border-bottom:1px dotted rgba(94,234,212,.5)}
+.tok-link:hover{color:var(--up);border-bottom-color:var(--up)}
+
+/* badge "já vendido" no histórico */
+.badge-sold{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  padding:2px 8px;border-radius:6px;color:#0b0c10;background:var(--muted)}
+
+/* ações da posição: meta + vender */
+.actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  justify-content:space-between;border-top:1px dashed var(--line);padding-top:9px;margin-top:2px}
+.meta-edit{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.meta-edit label{font-size:11px;color:var(--muted)}
+.meta-input{width:64px;background:var(--bg-2);border:1px solid var(--line);color:var(--txt);
+  border-radius:8px;padding:5px 8px;font-family:var(--mono);font-size:12px}
+.meta-input:focus{outline:none;border-color:var(--accent-2)}
+.meta-hint{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.btn-mini{background:var(--panel-2);border:1px solid var(--line);color:var(--txt);
+  border-radius:8px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:700}
+.btn-mini:hover{border-color:var(--accent-2)}
+.btn-sell{background:linear-gradient(180deg,#ff5f6f,#ec3346);border:none;color:#fff;
+  border-radius:9px;padding:7px 14px;cursor:pointer;font-weight:800;font-size:12px;
+  letter-spacing:.3px}
+.btn-sell:hover{filter:brightness(1.07)}
+
+/* evolução pós-venda no histórico */
+.postsale{grid-column:1/-1;display:flex;gap:12px;align-items:center;font-family:var(--mono);
+  font-size:11px;border-top:1px dashed var(--line);padding-top:8px;margin-top:2px}
+.ps-label{color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-size:10px}
+.postsale .ps-val{font-weight:800;font-size:14px}
+.postsale.up .ps-val{color:var(--up)} .postsale.down .ps-val{color:var(--down)}
+.ps-now,.ps-ago{color:var(--muted)}
+.ps-ago{margin-left:auto}
 
 /* ---------- footer regras ---------- */
 .rules{

@@ -56,6 +56,7 @@ class BotController:
                   dry_run=CFG.dry_run, envio_real=CFG.envio_real_armado)
 
         ultimo_scan = 0.0
+        ultimo_acompanhamento = 0.0
         while not self._stop.is_set():
             agora = time.time()
             try:
@@ -76,6 +77,11 @@ class BotController:
                         if self._stop.is_set():
                             break
                         trader.avaliar_e_comprar(pool)
+
+                # 3) acompanha (só leitura) os tokens já vendidos — cadência lenta
+                if agora - ultimo_acompanhamento >= CFG.intervalo_acompanhar_vendidos_segundos:
+                    ultimo_acompanhamento = agora
+                    trader.acompanhar_vendidos()
             except Exception as exc:
                 # rede de segurança final — o loop NUNCA morre
                 log_event(CFG.log_file, "erro_loop", erro=str(exc),
