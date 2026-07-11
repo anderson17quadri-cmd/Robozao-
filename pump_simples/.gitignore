@@ -1,0 +1,11 @@
+# segredos e estado local — NUNCA commitar
+.env
+state.json
+state.json.tmp
+decisions.jsonl
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/

@@ -1,0 +1,9 @@
+# robozão — dependências
+
+# --- Necessário sempre (dashboard + modo DRY_RUN) ---
+requests>=2.31
+flask>=3.0
+
+# --- Necessário SÓ para modo REAL (assinar/enviar transações Solana) ---
+# Podes instalar só quando fores mesmo trocar para real.
+solders>=0.21

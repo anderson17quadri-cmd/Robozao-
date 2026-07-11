@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>robozão · pump.fun bot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🤖</span>
+      <div class="brand-txt">
+        <h1>robozão</h1>
+        <p>pump.fun · comprar e vender rápido</p>
+      </div>
+    </div>
+
+    <div class="mode-block">
+      {% if modo.envio_real_armado %}
+        <span class="badge badge-real" title="Transações reais on-chain">● MODO REAL</span>
+      {% else %}
+        <span class="badge badge-dry" title="Nenhuma transação real é enviada">● DRY_RUN · simulado</span>
+      {% endif %}
+      <span class="wallet">wallet: {{ modo.wallet }}{% if modo.pubkey %} · {{ modo.pubkey[:4] }}…{{ modo.pubkey[-4:] }}{% endif %}</span>
+    </div>
+
+    <button id="toggleBtn" class="toggle off">
+      <span class="dot"></span><span class="lbl">LIGAR BOT</span>
+    </button>
+  </header>
+
+  <!-- KPIs -->
+  <section class="kpis">
+    <div class="kpi">
+      <span class="kpi-label">saldo</span>
+      <span class="kpi-val" id="kpiSaldo">—</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">valor total</span>
+      <span class="kpi-val" id="kpiTotal">—</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">P/L aberto</span>
+      <span class="kpi-val" id="kpiPlAberto">—</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">P/L realizado</span>
+      <span class="kpi-val" id="kpiPlReal">—</span>
+    </div>
+  </section>
+
+  <p class="statusline" id="statusLine">bot parado</p>
+
+  <main class="grid">
+    <!-- posições abertas -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>posições abertas</h2>
+        <span class="count" id="countPos">0</span>
+      </div>
+      <div id="posicoes" class="feed"></div>
+      <p class="empty" id="posVazio">sem posições abertas — à espera de tokens novos…</p>
+    </section>
+
+    <!-- histórico -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>histórico de trades</h2>
+        <span class="count" id="countHist">0</span>
+      </div>
+      <div id="historico" class="feed"></div>
+      <p class="empty" id="histVazio">ainda sem trades fechados.</p>
+    </section>
+  </main>
+
+  <footer class="rules">
+    <span>TP <b class="up">+{{ '%.0f'|format(modo.take_profit_pct) }}%</b></span>
+    <span>SL <b class="down">−{{ '%.0f'|format(modo.stop_loss_pct) }}%</b></span>
+    <span>timeout <b>{{ '%.0f'|format(modo.timeout_minutos) }}min</b></span>
+    <span>trade máx <b>${{ '%.0f'|format(modo.max_trade_usd) }}</b></span>
+    <span>liq. mín <b>${{ '%.0f'|format(modo.liquidez_minima_usd) }}</b></span>
+    <span class="sec-note">segurança: mint+freeze revogados (fail-closed)</span>
+  </footer>
+
+  <!-- modal confirmação modo real -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>⚠️ Confirmar arranque em MODO REAL</h3>
+      <p id="modalMsg">Vais gastar SOL da wallet a sério.</p>
+      <p class="modal-warn">Esta wallet é partilhada com o bot anterior. Não corras os dois em modo real ao mesmo tempo.</p>
+      <div class="modal-actions">
+        <button id="modalCancel" class="btn-ghost">cancelar</button>
+        <button id="modalOk" class="btn-danger">sim, ligar em REAL</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.MODO = {{ modo|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
