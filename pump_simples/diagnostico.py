@@ -148,10 +148,11 @@ def main():
     for motivo, n in por_motivo_saida.most_common():
         print(f"        - {motivo}: {n}  (P/L soma {_eur(pl_por_motivo[motivo])})")
     if vendas:
-        print("   detalhe:")
-        for e in vendas[:30]:
+        recentes = list(reversed(vendas))[:30]   # os MAIS RECENTES primeiro
+        print(f"   detalhe (últimos {len(recentes)}, mais recente no topo):")
+        for e in recentes:
             nome = (e.get("name") or "?")[:22]
-            print(f"        {nome:22} | {e.get('motivo','?'):11} | "
+            print(f"        {nome:22} | {e.get('motivo','?'):13} | "
                   f"{(e.get('pl_pct') or 0):+6.1f}% | {_eur(e.get('pl_usd', 0))}")
     abertas = estado.get("posicoes", [])
     print(f"   posições ainda ABERTAS agora: {len(abertas)}")
