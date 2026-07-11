@@ -31,6 +31,11 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 - **Trailing stop (saída principal):** deixa o **pico** correr (só sobe) e vende
   tudo se cair `TRAILING_STOP_PCT%` (default 30%) desde esse pico — não desde a
   compra. Quando o token nunca sobe acima da entrada, age como stop-loss.
+  **Escalonado:** acima de `TRAILING_APERTO_ACIMA_PCT` de ganho no pico (default
+  +100%), passa a usar `TRAILING_STOP_APERTADO_PCT` (default 15%) — protege mais
+  de um ganho grande, já que devolver 30% de um pico de +500% dói muito mais em
+  valor absoluto do que 30% de um pico de +20%. O log de venda regista
+  `trailing_pct_usado` e `pico_pct` para veres qual dos dois disparou.
 - **Take-profit:** **desligado por default** (`TAKE_PROFIT_PCT=0`) — não há teto
   de lucro; o pico corre livre e o trailing gere a subida. Podes definir uma meta
   por posição no dashboard, ou pôr um `TAKE_PROFIT_PCT` global se quiseres um teto.

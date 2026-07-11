@@ -102,6 +102,11 @@ class Config:
     # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO (não desde a compra).
     # Substitui o stop-loss fixo — quando o pico ≈ entrada, comporta-se como um stop normal.
     trailing_stop_pct: float = 30.0
+    # trailing ESCALONADO: aperta depois de um ganho grande no pico — dar 30% de um
+    # pico de +500% dói muito mais em valor absoluto do que 30% de um pico de +20%.
+    # Acima de TRAILING_APERTO_ACIMA_PCT de ganho no pico, passa a usar o apertado.
+    trailing_stop_apertado_pct: float = 15.0
+    trailing_aperto_acima_pct: float = 100.0
     stop_loss_pct: float = 25.0   # LEGADO: já não é usado (substituído pelo trailing)
     timeout_minutos: float = 10.0   # 0 = SEM timeout (só sai pelo trailing)
     # posições cujo PICO já passou este ganho ficam ISENTAS do timeout (são "runners"
@@ -194,6 +199,8 @@ def load_config() -> Config:
         vigia_max_por_ciclo=_get_int("VIGIA_MAX_POR_CICLO", 15),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 0.0),
         trailing_stop_pct=_get_float("TRAILING_STOP_PCT", 30.0),
+        trailing_stop_apertado_pct=_get_float("TRAILING_STOP_APERTADO_PCT", 15.0),
+        trailing_aperto_acima_pct=_get_float("TRAILING_APERTO_ACIMA_PCT", 100.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
         timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
         timeout_isento_acima_pct=_get_float("TIMEOUT_ISENTO_ACIMA_PCT", 50.0),

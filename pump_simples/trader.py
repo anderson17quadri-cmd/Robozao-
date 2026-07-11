@@ -236,14 +236,23 @@ def verificar_posicoes() -> None:
             meta = pos.get("meta_lucro_pct")
             alvo_tp = meta if (meta is not None and meta > 0) else CFG.take_profit_pct
 
-            # trailing stop: vende se cair TRAILING_STOP_PCT% desde o PICO.
-            # (quando o pico ainda ≈ entrada, isto age como stop-loss desde a compra)
+            # ganho do pico desde a entrada — usado tanto para escolher o trailing
+            # (escalonado) como para a isenção do timeout.
             pico = pos.get("preco_pico") or pos["entry_price"]
-            gatilho_trailing = pico * (1.0 - CFG.trailing_stop_pct / 100.0) if pico else 0.0
+            pico_pct = ((pico / pos["entry_price"] - 1.0) * 100.0) if pos["entry_price"] else 0.0
+
+            # trailing ESCALONADO: mais apertado depois de um ganho grande no pico.
+            # Dar 30% de um pico de +500% dói muito mais em valor absoluto do que
+            # 30% de um pico de +20% — por isso aperta acima de TRAILING_APERTO_ACIMA_PCT.
+            trailing_pct_ativo = (
+                CFG.trailing_stop_apertado_pct
+                if pico_pct >= CFG.trailing_aperto_acima_pct
+                else CFG.trailing_stop_pct
+            )
+            gatilho_trailing = pico * (1.0 - trailing_pct_ativo / 100.0) if pico else 0.0
 
             # timeout só se aplica aos que NÃO se mexeram. Se o pico já passou o limiar
             # de isenção (ex: +50%), a posição vira "runner" e fica só com o trailing.
-            pico_pct = ((pico / pos["entry_price"] - 1.0) * 100.0) if pos["entry_price"] else 0.0
             timeout_ativo = (
                 CFG.timeout_minutos and CFG.timeout_minutos > 0
                 and pico_pct < CFG.timeout_isento_acima_pct
@@ -257,7 +266,10 @@ def verificar_posicoes() -> None:
                 motivo = "timeout"
 
         if motivo:
-            _executar_venda(pos, preco, motivo)
+            extra = {}
+            if motivo == "trailing_stop":
+                extra = {"trailing_pct_usado": trailing_pct_ativo, "pico_pct": round(pico_pct, 1)}
+            _executar_venda(pos, preco, motivo, **extra)
 
 
 def vender_manual(pos_id: str) -> dict:
@@ -337,7 +349,7 @@ def acompanhar_vendidos() -> None:
         STATE.atualizar_preco_vendido(trade["id"], preco)
 
 
-def _executar_venda(pos, preco, motivo):
+def _executar_venda(pos, preco, motivo, **extra_log):
     if CFG.envio_real_armado:
         import jupiter
         # vende os tokens de volta para SOL
@@ -351,7 +363,7 @@ def _executar_venda(pos, preco, motivo):
         log_event(CFG.log_file, "venda", modo="REAL", mint=pos["mint"],
                   name=pos["name"], motivo=motivo, exit_price=preco,
                   pl_usd=fechado["pl_usd"], pl_pct=fechado["pl_pct"],
-                  signature=res["signature"], pos_id=pos["id"])
+                  signature=res["signature"], pos_id=pos["id"], **extra_log)
     else:
         # DRY_RUN — aplica slippage: enches a venda mais barato que a cotação.
         # Usa a liquidez ATUAL (não a da compra) — se colapsou entretanto, o
@@ -367,4 +379,4 @@ def _executar_venda(pos, preco, motivo):
                   name=pos["name"], motivo=motivo, exit_price=exit_efetivo,
                   preco_cotado=preco, slippage_pct=round(slip * 100, 2),
                   pl_usd=fechado["pl_usd"], pl_pct=fechado["pl_pct"],
-                  pos_id=pos["id"])
+                  pos_id=pos["id"], **extra_log)

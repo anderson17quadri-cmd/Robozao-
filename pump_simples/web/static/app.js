@@ -100,9 +100,16 @@
     const cls = signClass(p.pl_pct);
     const meta = (p.meta_lucro_pct !== null && p.meta_lucro_pct !== undefined) ? p.meta_lucro_pct : "";
     const alvoNum = meta !== "" ? Number(meta) : Number(MODO.take_profit_pct || 0);
+    // trailing ESCALONADO: qual % está ativo AGORA para esta posição (depende
+    // do ganho do pico desde a entrada — espelha a lógica do trader.py)
+    const picoPct = p.entry_price ? ((p.preco_pico || p.entry_price) / p.entry_price - 1) * 100 : 0;
+    const apertoAcima = Number(MODO.trailing_aperto_acima_pct || 100);
+    const trailingAtivo = picoPct >= apertoAcima
+      ? Number(MODO.trailing_stop_apertado_pct || 15)
+      : Number(MODO.trailing_stop_pct || 30);
     const alvoTxt = alvoNum > 0
       ? `meta: +${alvoNum.toFixed(0)}%`
-      : `só trailing −${Number(MODO.trailing_stop_pct || 30).toFixed(0)}% do pico`;
+      : `só trailing −${trailingAtivo.toFixed(0)}% do pico${picoPct >= apertoAcima ? " (apertado)" : ""}`;
     return `
       <div class="card ${cls}" data-id="${p.id}">
         <div>

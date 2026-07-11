@@ -39,6 +39,8 @@ def _modo_info() -> dict:
         "pubkey": get_public_key(),
         "take_profit_pct": CFG.take_profit_pct,
         "trailing_stop_pct": CFG.trailing_stop_pct,
+        "trailing_stop_apertado_pct": CFG.trailing_stop_apertado_pct,
+        "trailing_aperto_acima_pct": CFG.trailing_aperto_acima_pct,
         "stop_loss_pct": CFG.stop_loss_pct,
         "timeout_minutos": CFG.timeout_minutos,
         "timeout_isento_acima_pct": CFG.timeout_isento_acima_pct,
