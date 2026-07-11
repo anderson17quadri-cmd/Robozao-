@@ -143,6 +143,13 @@
       btn.querySelector(".lbl").textContent = "LIGAR BOT";
     }
     $("statusLine").textContent = state.ultima_msg || (state.bot_running ? "a correr" : "bot parado");
+
+    // valor por entrada — não sobrescreve enquanto o utilizador escreve
+    $("cfgCur").textContent = SIM;
+    const ti = $("tradeInput");
+    if (document.activeElement !== ti && state.max_trade_usd !== undefined) {
+      ti.value = state.max_trade_usd;
+    }
   }
 
   async function poll() {
@@ -222,9 +229,26 @@
       });
   }
 
+  async function salvarValorEntrada() {
+    const v = $("tradeInput").value.trim();
+    if (v === "" || Number(v) <= 0) return;
+    try {
+      await fetch("/api/config", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ max_trade_usd: v }),
+      });
+      $("tradeInput").blur();
+      await poll();
+    } catch (e) { /* ignora */ }
+  }
+
   // ---------- eventos ----------
   $("toggleBtn").addEventListener("click", () => toggle(false));
   $("resetBtn").addEventListener("click", reiniciar);
+  $("tradeSave").addEventListener("click", salvarValorEntrada);
+  $("tradeInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") salvarValorEntrada();
+  });
   $("modalCancel").addEventListener("click", hideModal);
   $("modalOk").addEventListener("click", () => {
     const fn = pendingConfirm; hideModal(); if (fn) fn();

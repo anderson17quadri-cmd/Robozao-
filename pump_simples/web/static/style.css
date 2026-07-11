@@ -92,9 +92,18 @@ body{
 .kpi-val{font-family:var(--mono);font-size:26px;font-weight:700}
 
 .statusline{
-  position:relative;z-index:1;margin:6px 26px 0;color:var(--muted);
-  font-size:12px;font-family:var(--mono)
+  color:var(--muted);font-size:12px;font-family:var(--mono);margin:0
 }
+.configbar{
+  position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px 16px;
+  align-items:center;justify-content:space-between;padding:8px 26px 0
+}
+.cfg-edit{display:flex;align-items:center;gap:7px}
+.cfg-edit label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.cfg-cur{color:var(--muted);font-family:var(--mono)}
+.cfg-input{width:80px;background:var(--bg-2);border:1px solid var(--line);color:var(--txt);
+  border-radius:8px;padding:6px 9px;font-family:var(--mono);font-size:13px}
+.cfg-input:focus{outline:none;border-color:var(--accent-2)}
 
 /* ---------- grid ---------- */
 .grid{
@@ -214,7 +223,7 @@ body{
   .kpis{padding:14px 14px 4px;gap:10px}
   .kpi{padding:13px 14px}
   .kpi-val{font-size:22px}
-  .statusline{margin:6px 14px 0}
+  .configbar{padding:8px 14px 0}
   .grid{padding:12px 14px 8px;gap:14px}
   .panel{padding:13px}
   .rules{padding:14px 14px 30px;gap:12px}

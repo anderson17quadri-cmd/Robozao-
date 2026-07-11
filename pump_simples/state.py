@@ -22,6 +22,8 @@ class AppState:
         self.bot_running: bool = False
         self.ultimo_scan: float = 0.0
         self.ultima_msg: str = "parado"
+        # valor de cada entrada (editável no dashboard; começa no do .env)
+        self.max_trade_usd: float = CFG.max_trade_usd
         self._load()
 
     # ---------- persistência ----------
@@ -32,6 +34,7 @@ class AppState:
             self.saldo_usd = data.get("saldo_usd", self.saldo_usd)
             self.posicoes = data.get("posicoes", [])
             self.historico = data.get("historico", [])
+            self.max_trade_usd = data.get("max_trade_usd", self.max_trade_usd)
         except FileNotFoundError:
             pass
         except Exception as exc:
@@ -43,6 +46,7 @@ class AppState:
                 "saldo_usd": self.saldo_usd,
                 "posicoes": self.posicoes,
                 "historico": self.historico,
+                "max_trade_usd": self.max_trade_usd,
                 "atualizado_em": time.time(),
             }
             tmp = CFG.state_file + ".tmp"
@@ -162,12 +166,25 @@ class AppState:
 
     def reset(self):
         """Reinicia a simulação: saldo volta ao inicial, limpa posições e histórico.
-        Só faz sentido em DRY_RUN — não toca em nada on-chain."""
+        Mantém o valor de entrada configurado. Só faz sentido em DRY_RUN."""
         with self._lock:
             self.saldo_usd = CFG.saldo_virtual_inicial
             self.posicoes = []
             self.historico = []
             self._save_locked()
+
+    def set_max_trade(self, valor) -> bool:
+        """Define o valor de cada entrada (persiste). Devolve False se inválido."""
+        try:
+            v = float(valor)
+        except (TypeError, ValueError):
+            return False
+        if v <= 0:
+            return False
+        with self._lock:
+            self.max_trade_usd = v
+            self._save_locked()
+            return True
 
     def snapshot(self) -> dict:
         """Cópia segura para o dashboard (sem segredos)."""
@@ -179,6 +196,7 @@ class AppState:
                 "saldo_usd": round(self.saldo_usd, 4),
                 "investido_usd": round(investido, 4),
                 "valor_total_usd": round(self.saldo_usd + investido + pl_aberto, 4),
+                "max_trade_usd": round(self.max_trade_usd, 4),
                 "pl_aberto_usd": round(pl_aberto, 4),
                 "pl_realizado_usd": round(realizado, 4),
                 "posicoes": [dict(p) for p in self.posicoes],

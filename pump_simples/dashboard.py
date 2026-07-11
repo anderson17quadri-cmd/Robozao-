@@ -103,6 +103,18 @@ def api_vender(pos_id):
     return jsonify(res), status
 
 
+@app.route("/api/config", methods=["POST"])
+def api_config():
+    """Ajusta o valor de cada entrada (max_trade_usd) em runtime, e persiste."""
+    body = request.get_json(silent=True) or {}
+    if "max_trade_usd" in body:
+        ok = STATE.set_max_trade(body.get("max_trade_usd"))
+        if not ok:
+            return jsonify({"ok": False, "motivo": "valor inválido (tem de ser > 0)"}), 400
+        return jsonify({"ok": True, "max_trade_usd": STATE.max_trade_usd})
+    return jsonify({"ok": False, "motivo": "nada para atualizar"}), 400
+
+
 @app.route("/api/reset", methods=["POST"])
 def api_reset():
     """Reinicia a simulação (saldo inicial, sem posições/histórico). Só DRY_RUN."""

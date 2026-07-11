@@ -55,7 +55,15 @@
     </div>
   </section>
 
-  <p class="statusline" id="statusLine">bot parado</p>
+  <div class="configbar">
+    <p class="statusline" id="statusLine">bot parado</p>
+    <div class="cfg-edit">
+      <label>valor por entrada</label>
+      <span class="cfg-cur" id="cfgCur">€</span>
+      <input type="number" id="tradeInput" class="cfg-input" step="0.5" min="0" placeholder="2">
+      <button id="tradeSave" class="btn-mini">ok</button>
+    </div>
+  </div>
 
   <main class="grid">
     <!-- posições abertas -->

@@ -61,7 +61,8 @@ def avaliar_e_comprar(pool: dict) -> None:
         return
 
     # --- Passou tudo => COMPRA ---
-    amount_usd = min(CFG.max_trade_usd, STATE.saldo_usd)
+    # valor de entrada editável no dashboard (STATE.max_trade_usd), limitado ao saldo
+    amount_usd = min(STATE.max_trade_usd, STATE.saldo_usd)
     if amount_usd <= 0:
         log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                   motivo="saldo_insuficiente", saldo=STATE.saldo_usd)
