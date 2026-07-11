@@ -73,6 +73,19 @@ def _verificar_uma(pos: dict, rpc_disponivel: bool) -> None:
             print(f"  ⚠️  RPC SOLANA: não confirmou ({seg['motivo']}) — "
                   "pode ser falha de rede, não necessariamente o token ser falso")
 
+        conc = solana_rpc.get_top_holder_concentration(mint)
+        if conc["confirmado"]:
+            aviso = ""
+            if conc["top2_10_pct"] >= 20:
+                aviso = "  ⚠️  ALTA — sinal de risco de despejo"
+            elif conc["top2_10_pct"] >= 10:
+                aviso = "  · moderada"
+            print(f"  📊 CONCENTRAÇÃO: maior conta {conc['maior_holder_pct']:.1f}% "
+                  f"(normalmente o pool/curva) | próximas 9 contas: "
+                  f"{conc['top2_10_pct']:.1f}%{aviso}")
+        else:
+            print(f"  ⚠️  CONCENTRAÇÃO: não verificada ({conc['motivo']})")
+
     print(f"  🔗 confirma tu mesmo: https://pump.fun/coin/{mint}")
 
 

@@ -93,3 +93,76 @@ def check_mint_authorities(mint: str) -> dict:
         resultado["motivo"] = "autoridade ainda ativa (mint ou freeze != None)"
 
     return resultado
+
+
+def get_top_holder_concentration(mint: str) -> dict:
+    """
+    Aproximação da concentração de holders — o sinal de rug que faltava.
+    Na Solana não há "código" próprio por token (todos usam o programa SPL
+    padrão); os riscos reais são: autoridades (já verificado acima), liquidez
+    (já filtrada) e CONCENTRAÇÃO — se um wallet detém uma fatia enorme, pode
+    despejar em cima de quem comprou.
+
+    Usa getTokenLargestAccounts + getTokenSupply. Assume que a MAIOR conta é o
+    pool/bonding-curve (detém a maioria da supply por desenho — normal, não é
+    red flag) e mede a concentração das contas #2–#10 como proxy de "baleias"/dev.
+    É uma aproximação (sem o endereço exato do pool não dá para excluir com
+    certeza absoluta) — mas é o melhor sinal disponível via RPC gratuita.
+
+    Devolve:
+        {"confirmado": bool, "maior_holder_pct": float|None,
+         "top2_10_pct": float|None, "motivo": str}
+    """
+    resultado = {"confirmado": False, "maior_holder_pct": None,
+                 "top2_10_pct": None, "motivo": ""}
+    if not mint:
+        resultado["motivo"] = "mint vazio"
+        return resultado
+    if not CFG.solana_rpc_url:
+        resultado["motivo"] = "SOLANA_RPC_URL não configurada"
+        return resultado
+
+    largest, motivo1 = _rpc_call("getTokenLargestAccounts", [mint])
+    if largest is None:
+        resultado["motivo"] = f"falha RPC (largest accounts): {motivo1}"
+        return resultado
+    if "error" in largest:
+        # RPCs públicas costumam BLOQUEAR ou limitar mais este método específico
+        # (mais pesado que o normal). Não é o token que é suspeito — é o RPC.
+        resultado["motivo"] = (
+            f"RPC recusou getTokenLargestAccounts: {largest['error']} "
+            "(comum em RPCs públicas gratuitas — usa Helius ou similar p/ isto funcionar)"
+        )
+        return resultado
+
+    supply, motivo2 = _rpc_call("getTokenSupply", [mint])
+    if supply is None:
+        resultado["motivo"] = f"falha RPC (supply): {motivo2}"
+        return resultado
+    if "error" in supply:
+        resultado["motivo"] = f"RPC recusou getTokenSupply: {supply['error']}"
+        return resultado
+
+    try:
+        contas = largest["result"]["value"]
+        total = float(supply["result"]["value"]["amount"])
+    except (KeyError, TypeError, ValueError):
+        resultado["motivo"] = "resposta RPC inesperada (não foi possível parsear)"
+        return resultado
+
+    if not contas or total <= 0:
+        resultado["motivo"] = "sem contas de holders ou supply zero"
+        return resultado
+
+    valores = sorted((float(c.get("amount", 0)) for c in contas), reverse=True)
+    maior_pct = (valores[0] / total * 100.0) if valores else 0.0
+    resto = valores[1:10]
+    top2_10_pct = (sum(resto) / total * 100.0) if resto else 0.0
+
+    resultado.update({
+        "confirmado": True,
+        "maior_holder_pct": round(maior_pct, 2),
+        "top2_10_pct": round(top2_10_pct, 2),
+        "motivo": "ok",
+    })
+    return resultado

@@ -141,6 +141,11 @@ body{
 .card.down{border-left-color:var(--down)}
 .card .name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
 .card .mint{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.mint-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn-copy{background:var(--panel-2);border:1px solid var(--line);color:var(--accent-2);
+  border-radius:7px;padding:2px 8px;font-size:10px;font-family:var(--mono);
+  cursor:pointer;font-weight:700}
+.btn-copy:hover{border-color:var(--accent-2)}
 .hype{display:inline-block;margin-top:4px;font-size:11px;color:var(--amber);
   background:rgba(255,176,32,.10);border:1px solid rgba(255,176,32,.28);
   border-radius:999px;padding:2px 9px;font-family:var(--mono)}

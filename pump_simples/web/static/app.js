@@ -65,6 +65,36 @@
     return `<span class="hype" title="compradores e volume na 1ª hora">${fogo} ${nb} compradores · ${fmtCompact(v)} vol</span>`;
   }
 
+  // linha com o mint abreviado + botão para copiar o endereço COMPLETO do contrato
+  // (para colares noutro sítio: DexScreener, Birdeye, carteira, etc.)
+  function mintRow(mint) {
+    if (!mint) return "";
+    return `<div class="mint-row">
+      <span class="mint">${shortMint(mint)}</span>
+      <button class="btn-copy" data-act="copy" data-mint="${escapeHtml(mint)}" title="Copiar endereço do contrato">📋 copiar</button>
+    </div>`;
+  }
+
+  async function copiarContrato(mint, btn) {
+    const original = btn.textContent;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(mint);
+      } else {
+        // fallback para navegadores/contextos sem Clipboard API
+        const ta = document.createElement("textarea");
+        ta.value = mint; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      btn.textContent = "✓ copiado";
+    } catch (e) {
+      btn.textContent = "erro";
+    }
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  }
+
   // ---------- cards ----------
   function posicaoCard(p) {
     const cls = signClass(p.pl_pct);
@@ -77,7 +107,7 @@
       <div class="card ${cls}" data-id="${p.id}">
         <div>
           <div class="name">${pumpLink(p.mint, p.name || "?")}${p.canal === "hype" ? ' <span class="tag-hype">HYPE</span>' : ""}</div>
-          <div class="mint">${shortMint(p.mint)}</div>
+          ${mintRow(p.mint)}
           ${hypeBadge(p)}
         </div>
         <div class="pl ${cls}">${fmtPct(p.pl_pct)}</div>
@@ -113,7 +143,7 @@
             <span class="badge-sold">já vendido</span>
             <span class="tag ${h.motivo_saida || ""}">${escapeHtml(h.motivo_saida || "")}</span>
           </div>
-          <div class="mint">${shortMint(h.mint)}</div>
+          ${mintRow(h.mint)}
           ${hypeBadge(h)}
         </div>
         <div class="pl ${cls}">${fmtPct(h.pl_pct)}</div>
@@ -349,6 +379,10 @@
     if (link) { openPump(link.getAttribute("data-mint")); return; }
     const b = ev.target.closest("button");
     if (!b) return;
+    if (b.getAttribute("data-act") === "copy") {
+      copiarContrato(b.getAttribute("data-mint"), b);
+      return;
+    }
     const id = b.getAttribute("data-id");
     if (b.getAttribute("data-act") === "sell") {
       venderPosicao(id, b.getAttribute("data-name") || "?");
@@ -359,10 +393,14 @@
     }
   });
 
-  // links pump.fun no histórico
+  // links pump.fun + copiar contrato no histórico
   $("historico").addEventListener("click", (ev) => {
     const link = ev.target.closest(".tok-link");
-    if (link) openPump(link.getAttribute("data-mint"));
+    if (link) { openPump(link.getAttribute("data-mint")); return; }
+    const b = ev.target.closest("button");
+    if (b && b.getAttribute("data-act") === "copy") {
+      copiarContrato(b.getAttribute("data-mint"), b);
+    }
   });
 
   poll();
