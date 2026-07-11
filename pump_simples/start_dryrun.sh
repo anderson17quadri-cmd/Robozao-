@@ -20,6 +20,10 @@ WALLET_PRIVATE_KEY=
 # RPC pública grátis (sem chave). Troca pela tua Helius quando tiver créditos.
 SOLANA_RPC_URL=https://solana-rpc.publicnode.com
 
+# Fonte de deteção: gecko | pumpfun_nao_oficial | bitquery
+FONTE_DETECCAO=gecko
+BITQUERY_API_KEY=
+
 # Regras
 LIQUIDEZ_MINIMA_USD=1000
 TAKE_PROFIT_PCT=50

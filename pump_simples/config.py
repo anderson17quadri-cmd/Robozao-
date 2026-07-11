@@ -67,6 +67,11 @@ class Config:
     wallet_private_key: str = ""             # base58, lido do .env — NUNCA logado
     solana_rpc_url: str = ""                 # RPC Helius (mesma do bot anterior)
 
+    # --- Fonte de deteção (só UMA ativa de cada vez) ---
+    # "gecko" (default) | "pumpfun_nao_oficial" | "bitquery"
+    fonte_deteccao: str = "gecko"
+    bitquery_api_key: str = ""               # só para fonte="bitquery" (grátis em bitquery.io)
+
     # --- Regras de entrada ---
     liquidez_minima_usd: float = 1000.0
 
@@ -97,6 +102,8 @@ class Config:
     # Endpoints (deixados como config para facilitar testes)
     gecko_api_base: str = "https://api.geckoterminal.com/api/v2"
     jupiter_api_base: str = "https://quote-api.jup.ag/v6"
+    pumpfun_api_base: str = "https://frontend-api.pump.fun"
+    bitquery_api_url: str = "https://streaming.bitquery.io/eap"
 
     @property
     def wallet_configurada(self) -> bool:
@@ -108,13 +115,25 @@ class Config:
         return (not self.dry_run) and self.permitir_envio_real
 
 
+_FONTES_VALIDAS = ("gecko", "pumpfun_nao_oficial", "bitquery")
+
+
 def load_config() -> Config:
     _load_dotenv(BASE_DIR / ".env")
+
+    fonte = _get("FONTE_DETECCAO", "gecko").strip().lower()
+    if fonte not in _FONTES_VALIDAS:
+        print(f"[config] FONTE_DETECCAO='{fonte}' inválida; a usar 'gecko'. "
+              f"Válidas: {_FONTES_VALIDAS}")
+        fonte = "gecko"
+
     return Config(
         dry_run=_get_bool("DRY_RUN", True),
         permitir_envio_real=_get_bool("PERMITIR_ENVIO_REAL", False),
         wallet_private_key=_get("WALLET_PRIVATE_KEY", ""),
         solana_rpc_url=_get("SOLANA_RPC_URL", ""),
+        fonte_deteccao=fonte,
+        bitquery_api_key=_get("BITQUERY_API_KEY", ""),
         liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 1000.0),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 50.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),

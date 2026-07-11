@@ -95,6 +95,46 @@ def get_pool_price(pool_address: str) -> float | None:
     return _f(attrs.get("base_token_price_usd"))
 
 
+def find_pool_by_mint(mint: str) -> dict | None:
+    """
+    Dado um mint, encontra o melhor pool (maior liquidez) na GeckoTerminal e
+    devolve o formato normalizado usado pelo resto do bot:
+        {pool_address, mint, name, price_usd, liquidity_usd, dex, created_at}
+    None se o token ainda não tiver pool indexado.
+
+    Serve para PADRONIZAR candidatos vindos de fontes que não são a GeckoTerminal
+    (pumpfun_nao_oficial / bitquery), garantindo um pool_address para a
+    monitorização de preço funcionar igual, independentemente da fonte.
+    """
+    if not mint:
+        return None
+    data = _get_json(f"{CFG.gecko_api_base}/networks/solana/tokens/{mint}/pools")
+    if not data or "data" not in data:
+        return None
+
+    melhor = None
+    for item in data.get("data", []):
+        try:
+            attrs = item.get("attributes", {}) or {}
+            rel = item.get("relationships", {}) or {}
+            dex_id = ((rel.get("dex", {}) or {}).get("data", {}) or {}).get("id", "")
+            liq = _f(attrs.get("reserve_in_usd")) or 0.0
+            cand = {
+                "pool_address": attrs.get("address", ""),
+                "mint": mint,
+                "name": attrs.get("name", "?"),
+                "price_usd": _f(attrs.get("base_token_price_usd")),
+                "liquidity_usd": liq,
+                "dex": dex_id,
+                "created_at": attrs.get("pool_created_at", ""),
+            }
+            if cand["pool_address"] and (melhor is None or liq > melhor["liquidity_usd"]):
+                melhor = cand
+        except Exception:
+            continue
+    return melhor
+
+
 def get_sol_price_usd() -> float | None:
     """Preço do SOL em USD (usado só no modo real para converter USD->SOL)."""
     data = _get_json(

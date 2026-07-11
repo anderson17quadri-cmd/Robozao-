@@ -51,6 +51,7 @@ class BotController:
         STATE.bot_running = True
         STATE.ultima_msg = f"a correr — {modo}"
         log_event(CFG.log_file, "bot_start", modo=modo,
+                  fonte_deteccao=CFG.fonte_deteccao,
                   wallet=wallet_status(), pubkey=get_public_key(),
                   dry_run=CFG.dry_run, envio_real=CFG.envio_real_armado)
 
@@ -65,10 +66,10 @@ class BotController:
                 if agora - ultimo_scan >= CFG.intervalo_scan_segundos:
                     ultimo_scan = agora
                     STATE.ultimo_scan = agora
-                    import gecko
-                    pools = gecko.get_new_pump_pools()
+                    import fontes
+                    pools = fontes.get_new_pump_pools()  # fonte definida em CFG.fonte_deteccao
                     STATE.ultima_msg = (
-                        f"{modo} — {len(pools)} pools novos, "
+                        f"{modo} [{CFG.fonte_deteccao}] — {len(pools)} pools, "
                         f"{len(STATE.posicoes)} posições abertas"
                     )
                     for pool in pools:
@@ -98,6 +99,7 @@ def _run_headless():
     print("=" * 60)
     print(" robozão — bot pump.fun (headless)")
     print(f"  modo........: {'DRY_RUN (simulado)' if not CFG.envio_real_armado else 'REAL ⚠️'}")
+    print(f"  fonte.......: {CFG.fonte_deteccao}")
     print(f"  wallet......: {wallet_status()}  ({get_public_key() or 'sem pubkey'})")
     print(f"  saldo.......: ${STATE.saldo_usd:.2f}")
     print(f"  take/stop...: +{CFG.take_profit_pct:.0f}% / -{CFG.stop_loss_pct:.0f}%")

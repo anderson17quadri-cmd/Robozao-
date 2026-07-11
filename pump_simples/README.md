@@ -11,7 +11,7 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 
 ## O que faz
 
-- **Deteta** tokens novos pump.fun via [GeckoTerminal](https://www.geckoterminal.com/) (`/networks/solana/new_pools`, filtrando `dex=pump-fun`). API pública, gratuita, sem chave.
+- **Deteta** tokens novos pump.fun. Fonte **alternável** por config `FONTE_DETECCAO` (só uma ativa de cada vez), todas com o mesmo formato de saída — ver [Fontes de deteção](#fontes-de-deteção).
 - **Verifica segurança** via RPC Solana (Helius): `getAccountInfo` (`jsonParsed`) para confirmar que `mintAuthority` **e** `freezeAuthority` estão **ambos revogados (None)**.
 - **Compra/vende** (simulado por default; real via [Jupiter](https://station.jup.ag/docs/apis/swap-api) quando ativado).
 - **Dashboard web** com estética pump.fun (saldo, posições em tempo real, histórico, toggle liga/desliga).
@@ -28,6 +28,30 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 - Verificação a cada `INTERVALO_VERIFICACAO_SEGUNDOS` (default 15s).
 
 ---
+
+## Fontes de deteção
+
+Escolhes de onde vêm os tokens novos com `FONTE_DETECCAO` no `.env` — **só uma
+ativa de cada vez**. Todas devolvem o mesmo formato, por isso o resto do bot
+(`trader.py`, monitorização, regras) **funciona igual, sem saber qual fonte está a usar**.
+
+| `FONTE_DETECCAO` | Fonte | Chave? | Notas |
+|---|---|---|---|
+| `gecko` *(default)* | GeckoTerminal `/new_pools` | não | grátis, dados completos |
+| `pumpfun_nao_oficial` | API não-oficial do pump.fun | não | grátis; engenharia reversa (à la [BankkRoll/pumpfun-apis](https://github.com/BankkRoll/pumpfun-apis)); pode partir se o pump.fun mudar a API |
+| `bitquery` | [Bitquery](https://docs.bitquery.io/) GraphQL | **sim** (`BITQUERY_API_KEY`) | plano grátis 100k pontos/mês, sem streaming |
+
+**Como funciona por dentro:** as fontes alternativas fazem só a *descoberta* (que
+mints considerar). O `pool_address`, preço e liquidez são padronizados via
+GeckoTerminal (o oráculo de preço gratuito e uniforme) — assim a monitorização de
+posições funciona igual em qualquer fonte, e trocar de fonte nunca altera o
+pipeline. Um token ainda sem pool indexado no oráculo é ignorado (fail-safe).
+
+Para `bitquery`, mete no `.env`:
+```env
+FONTE_DETECCAO=bitquery
+BITQUERY_API_KEY=a-tua-key   # cadastro grátis em bitquery.io
+```
 
 ## ⚠️ Aviso importante — wallet partilhada
 

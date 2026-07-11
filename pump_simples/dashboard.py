@@ -31,6 +31,7 @@ def _modo_info() -> dict:
         "dry_run": CFG.dry_run,
         "envio_real_armado": CFG.envio_real_armado,
         "modo_label": "REAL" if CFG.envio_real_armado else "DRY_RUN",
+        "fonte_deteccao": CFG.fonte_deteccao,
         "wallet": wallet_status(),
         "pubkey": get_public_key(),
         "take_profit_pct": CFG.take_profit_pct,
