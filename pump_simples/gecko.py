@@ -9,6 +9,8 @@ Toda chamada em try/except: uma falha devolve valores seguros (None / lista vazi
 e nunca derruba o loop.
 """
 
+import time
+
 import requests
 
 from config import CFG, SOL_MINT
@@ -33,6 +35,24 @@ def _get_json(url: str, params: dict | None = None) -> dict | None:
         return resp.json()
     except Exception:
         return None
+
+
+def _get_json_com_status(url: str) -> tuple[int | None, dict | None]:
+    """
+    Como _get_json, mas preserva o código HTTP — necessário para distinguir um
+    404 real (o recurso não existe) de falhas transitórias (429/timeout/rede),
+    que _get_json trata todas da mesma forma (None).
+    """
+    try:
+        gecko_limiter.acquire()
+        resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
+        try:
+            corpo = resp.json()
+        except ValueError:
+            corpo = None
+        return resp.status_code, corpo
+    except Exception:
+        return None, None
 
 
 def _f(value) -> float | None:
@@ -117,26 +137,53 @@ def get_pool_price(pool_address: str) -> float | None:
     return _f(attrs.get("base_token_price_usd"))
 
 
-def verificar_pool(pool_address: str, mint_esperado: str = "") -> dict:
+def verificar_pool(pool_address: str, mint_esperado: str = "", tentativas: int = 3) -> dict:
     """
     Confirma que um pool_address é REAL na GeckoTerminal (não inventado/corrompido)
     e, se `mint_esperado` for dado, que o mint do pool bate certo com o que temos
     guardado. Usado para auditar se as posições do bot são tokens genuínos.
 
+    Tenta várias vezes antes de desistir: uma falha de rede/rate-limit (429) NÃO
+    é o mesmo que "o pool não existe" — sem retry, isso dava falsos negativos.
+
     Devolve:
-        {"existe": bool, "motivo": str, "name": str, "price_usd": float|None,
-         "liquidity_usd": float, "dex": str, "mint_no_gecko": str,
-         "mint_confere": bool|None}
+        {"existe": bool, "confirmado": bool, "motivo": str, "name": str,
+         "price_usd": float|None, "liquidity_usd": float, "dex": str,
+         "mint_no_gecko": str, "mint_confere": bool|None}
+    "confirmado" distingue "não existe" (False + confirmado=True) de
+    "não consegui verificar" (False + confirmado=False, ex: rede instável).
     """
-    resultado = {"existe": False, "motivo": "", "name": "?", "price_usd": None,
-                 "liquidity_usd": 0.0, "dex": "", "mint_no_gecko": "", "mint_confere": None}
+    resultado = {"existe": False, "confirmado": False, "motivo": "", "name": "?",
+                 "price_usd": None, "liquidity_usd": 0.0, "dex": "",
+                 "mint_no_gecko": "", "mint_confere": None}
     if not pool_address:
+        resultado["confirmado"] = True   # não há dúvida: não há endereço p/ verificar
         resultado["motivo"] = "pool_address vazio"
         return resultado
 
-    data = _get_json(f"{CFG.gecko_api_base}/networks/solana/pools/{pool_address}")
+    url = f"{CFG.gecko_api_base}/networks/solana/pools/{pool_address}"
+    status, data = None, None
+    for tentativa in range(tentativas):
+        status, data = _get_json_com_status(url)
+        if status == 404:
+            break   # resposta definitiva — não vale a pena repetir
+        if data and "data" in data:
+            break   # sucesso
+        if tentativa < tentativas - 1:
+            time.sleep(1.5)
+
+    if status == 404:
+        # 404 é uma resposta DEFINITIVA da API: o pool não existe.
+        resultado["confirmado"] = True
+        resultado["motivo"] = "pool não existe na GeckoTerminal (HTTP 404 — resposta definitiva)"
+        return resultado
+
     if not data or "data" not in data:
-        resultado["motivo"] = "pool NÃO encontrado na GeckoTerminal (endereço inválido/inexistente?)"
+        resultado["confirmado"] = False
+        resultado["motivo"] = (
+            f"sem resposta válida da GeckoTerminal após {tentativas} tentativas "
+            f"(último status: {status}) — INCONCLUSIVO, não prova que o token seja falso"
+        )
         return resultado
 
     attrs = (data.get("data", {}) or {}).get("attributes", {}) or {}
@@ -147,6 +194,7 @@ def verificar_pool(pool_address: str, mint_esperado: str = "") -> dict:
 
     resultado.update({
         "existe": True,
+        "confirmado": True,
         "motivo": "pool confirmado na GeckoTerminal",
         "name": attrs.get("name", "?"),
         "price_usd": _f(attrs.get("base_token_price_usd")),

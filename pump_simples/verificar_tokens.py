@@ -45,16 +45,23 @@ def _verificar_uma(pos: dict, rpc_disponivel: bool) -> None:
     print(f"  pool_address: {pool_address}")
 
     r = gecko.verificar_pool(pool_address, mint)
-    if not r["existe"]:
-        print(f"  ❌ GECKOTERMINAL: {r['motivo']}")
-        print("     -> este pool NÃO foi confirmado. Suspeito (dados corrompidos?).")
-    else:
+    if r["existe"]:
         print(f"  ✅ GECKOTERMINAL: pool real — \"{r['name']}\", "
               f"liquidez ${r['liquidity_usd']:,.0f}, dex={r['dex']}")
         if r["mint_confere"] is False:
             print(f"     ⚠️  MINT NÃO BATE CERTO! guardado={mint} | no pool={r['mint_no_gecko']}")
         elif r["mint_confere"] is True:
             print("     ✅ mint confere com o do pool")
+    elif r["confirmado"]:
+        # confirmou ativamente que NÃO existe (não é falha de rede)
+        print(f"  ❌ GECKOTERMINAL: {r['motivo']}")
+        print("     -> pool não encontrado. Pode ter sido removido/migrado de dex,")
+        print("        ou o endereço guardado estar errado. Confirma com o link abaixo.")
+    else:
+        # não deu para confirmar nem desmentir — NÃO é prova de nada
+        print(f"  ⚠️  GECKOTERMINAL: {r['motivo']}")
+        print("     -> INCONCLUSIVO (não prova que o token seja falso). Tenta mais")
+        print("        tarde, ou confirma via RPC/link abaixo.")
 
     if rpc_disponivel:
         import solana_rpc
@@ -106,7 +113,11 @@ def main():
             _verificar_uma(h, rpc_disponivel)
 
     print("\n" + "=" * 62)
-    print(" Resumo: ✅ = token confirmado real e independente (GeckoTerminal/RPC).")
+    print(" Resumo:")
+    print("   ✅ = token confirmado real e independente (GeckoTerminal/RPC).")
+    print("   ⚠️  = INCONCLUSIVO (falha de rede/rate-limit) — NÃO prova nada,")
+    print("        tenta correr de novo.")
+    print("   ❌ = confirmado que o pool não existe/foi removido — investiga.")
     print(" Isto NÃO significa que a compra foi executada a sério — para isso,")
     print(" vê a secção 0 do diagnostico.py (assinatura on-chain = trade real).")
     print("=" * 62)
