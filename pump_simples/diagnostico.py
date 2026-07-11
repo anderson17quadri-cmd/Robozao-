@@ -203,7 +203,61 @@ def main():
     # ---------- 8) DESEMPENHO POR LIQUIDEZ À COMPRA ----------
     _analise_por_liquidez(compras, vendas)
 
+    # ---------- 9) DESEMPENHO POR HYPE (compradores/volume à compra) ----------
+    _analise_por_hype(compras, vendas)
+
     print("\n" + "=" * 62)
+
+
+def _faixas_desempenho(trades, chave, faixas, unidade=""):
+    """Imprime win-rate/P&L por faixa de uma métrica (ex: buyers_h1, volume_h1)."""
+    print(f"   {'faixa':12} {'n':>4} {'win%':>6} {'P/L soma':>12} {'P/L med %':>10}")
+    algum = False
+    for lo, hi, rot in faixas:
+        grupo = [t for t in trades if t[chave] is not None and lo <= t[chave] < hi]
+        if not grupo:
+            continue
+        algum = True
+        n = len(grupo)
+        wins = sum(1 for t in grupo if t["pl_usd"] > 0)
+        soma = sum(t["pl_usd"] for t in grupo)
+        medpct = _mediana([t["pl_pct"] for t in grupo]) or 0.0
+        print(f"   {rot:12} {n:>4} {wins/n*100:>5.0f}% {_eur(soma):>12} {medpct:>+9.1f}%")
+    if not algum:
+        print("   (sem dados nesta métrica ainda — corre um novo período)")
+
+
+def _analise_por_hype(compras: list[dict], vendas: list[dict]):
+    """Os mais 'hypados' (mais compradores/volume à compra) ganham mais?"""
+    print("\n" + "-" * 62)
+    print("9) DESEMPENHO POR HYPE À COMPRA (compradores e volume na 1ª hora)")
+
+    compra_por_id = {c.get("pos_id"): c for c in compras if c.get("pos_id")}
+    trades = []
+    for v in vendas:
+        c = compra_por_id.get(v.get("pos_id"))
+        if not c:
+            continue
+        trades.append({
+            "buyers_h1": c.get("buyers_h1"),
+            "volume_h1": c.get("volume_h1"),
+            "pl_usd": v.get("pl_usd") or 0.0,
+            "pl_pct": v.get("pl_pct") or 0.0,
+        })
+    if not trades or all(t["buyers_h1"] is None and t["volume_h1"] is None for t in trades):
+        print("   sem métricas de hype registadas ainda (começam a partir de agora).")
+        print("   Corre um novo período para ver se os hypados compensam.")
+        return
+
+    print("   » por Nº DE COMPRADORES (1h):")
+    _faixas_desempenho(trades, "buyers_h1", [
+        (0, 5, "< 5"), (5, 15, "5–15"), (15, 40, "15–40"),
+        (40, 100, "40–100"), (100, float("inf"), "100+")])
+
+    print("   » por VOLUME (1h):")
+    _faixas_desempenho(trades, "volume_h1", [
+        (0, 1000, "< $1k"), (1000, 5000, "$1k–5k"), (5000, 20000, "$5k–20k"),
+        (20000, 100000, "$20k–100k"), (100000, float("inf"), "$100k+")])
 
 
 def _analise_por_liquidez(compras: list[dict], vendas: list[dict]):

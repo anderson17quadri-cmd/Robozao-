@@ -66,6 +66,12 @@ def _padronizar(candidatos: list[dict], fonte: str) -> list[dict]:
             "liquidity_usd": info.get("liquidity_usd") or 0.0,
             "dex": info.get("dex") or "pump-fun",
             "created_at": cand.get("created_at") or info.get("created_at", ""),
+            # métricas de hype vindas do gecko (volume/compradores)
+            "volume_h1": info.get("volume_h1", 0.0),
+            "volume_m5": info.get("volume_m5", 0.0),
+            "buyers_h1": info.get("buyers_h1", 0),
+            "buyers_m5": info.get("buyers_m5", 0),
+            "txns_h1": info.get("txns_h1", 0),
         })
 
     if not pools and candidatos:

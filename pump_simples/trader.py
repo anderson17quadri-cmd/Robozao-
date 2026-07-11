@@ -129,6 +129,8 @@ def _executar_compra(pool, amount_usd, preco, seg):
         log_event(CFG.log_file, "compra", modo="REAL", mint=mint, name=nome,
                   amount_usd=amount_usd, entry_price=preco,
                   liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
+                  volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
+                  txns_h1=pool.get("txns_h1"),
                   signature=res["signature"], pos_id=pos["id"],
                   seguranca=seg["motivo"])
     else:
@@ -145,6 +147,8 @@ def _executar_compra(pool, amount_usd, preco, seg):
                   amount_usd=amount_usd, entry_price=entry_efetivo, preco_cotado=preco,
                   slippage_pct=round(slip * 100, 2),
                   liquidez_usd=liquidez, dex=pool.get("dex"),
+                  volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
+                  txns_h1=pool.get("txns_h1"),
                   pos_id=pos["id"], seguranca=seg["motivo"])
 
 

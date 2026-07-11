@@ -44,6 +44,22 @@ def _f(value) -> float | None:
         return None
 
 
+def _metricas_hype(attrs: dict) -> dict:
+    """Extrai sinais de 'hype' dos atributos de um pool GeckoTerminal:
+    volume e nº de compradores na última hora + últimos 5 min."""
+    vol = attrs.get("volume_usd", {}) or {}
+    tx = attrs.get("transactions", {}) or {}
+    tx_h1 = tx.get("h1", {}) or {}
+    tx_m5 = tx.get("m5", {}) or {}
+    return {
+        "volume_h1": _f(vol.get("h1")) or 0.0,
+        "volume_m5": _f(vol.get("m5")) or 0.0,
+        "buyers_h1": int(tx_h1.get("buyers") or 0),
+        "buyers_m5": int(tx_m5.get("buyers") or 0),
+        "txns_h1": int(tx_h1.get("buys") or 0) + int(tx_h1.get("sells") or 0),
+    }
+
+
 def get_new_pump_pools() -> list[dict]:
     """
     Devolve pools pump.fun recém-criados, normalizados:
@@ -81,6 +97,7 @@ def get_new_pump_pools() -> list[dict]:
                     "liquidity_usd": _f(attrs.get("reserve_in_usd")) or 0.0,
                     "dex": dex_id,
                     "created_at": attrs.get("pool_created_at", ""),
+                    **_metricas_hype(attrs),
                 }
             )
         except Exception:
@@ -132,6 +149,7 @@ def find_pool_by_mint(mint: str) -> dict | None:
                 "liquidity_usd": liq,
                 "dex": dex_id,
                 "created_at": attrs.get("pool_created_at", ""),
+                **_metricas_hype(attrs),
             }
             if cand["pool_address"] and (melhor is None or liq > melhor["liquidity_usd"]):
                 melhor = cand
