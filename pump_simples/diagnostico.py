@@ -196,12 +196,71 @@ def main():
     # ---------- 6) PADRÃO: ganhadores vs perdedores ----------
     _analise_padroes(compras, vendas)
 
+    # ---------- 7) ARREPENDIMENTO: subiu depois de vender? ----------
+    _analise_arrependimento(estado)
+
     print("\n" + "=" * 62)
 
 
 def _mediana(valores):
     vals = [v for v in valores if v is not None]
     return statistics.median(vals) if vals else None
+
+
+def _analise_arrependimento(estado: dict):
+    """
+    Usa o acompanhamento pós-venda (var_pos_venda_pct no histórico) para responder:
+    dos tokens que vendemos, quantos SUBIRAM depois? Foco nos stop-losses — é o
+    sinal que diz se o stop está apertado demais (a vender no fundo).
+    """
+    print("\n" + "-" * 62)
+    print("7) ARREPENDIMENTO — subiu depois de vender? (acompanhamento pós-venda)")
+
+    hist = estado.get("historico", [])
+    seguidos = [h for h in hist if h.get("var_pos_venda_pct") is not None]
+    if not seguidos:
+        print("   sem dados de acompanhamento pós-venda ainda.")
+        print("   (só os últimos ACOMPANHAR_VENDIDOS_MAX trades são seguidos, e só")
+        print("    enquanto o bot está ligado — corre-o mais um pouco.)")
+        return
+
+    def _bloco(rotulo, grupo):
+        if not grupo:
+            print(f"   {rotulo}: (nenhum seguido)")
+            return
+        vars_ = [h.get("var_pos_venda_pct") or 0.0 for h in grupo]
+        subiram = [v for v in vars_ if v > 0]
+        forte = [v for v in vars_ if v > 30]     # recuperou bem depois de vender
+        med = _mediana(vars_)
+        print(f"   {rotulo} (seguidos: {len(grupo)}):")
+        print(f"        subiram após a venda....: {len(subiram)}/{len(grupo)} "
+              f"({len(subiram)/len(grupo)*100:.0f}%)")
+        print(f"        recuperaram >+30%.......: {len(forte)}  "
+              f"(estes são os que doem — vendidos no fundo)")
+        print(f"        variação pós-venda média: {(_mediana(vars_) or 0):+.1f}% (mediana)")
+
+    stops = [h for h in seguidos if h.get("motivo_saida") == "stop_loss"]
+    timeouts = [h for h in seguidos if h.get("motivo_saida") == "timeout"]
+    tps = [h for h in seguidos if h.get("motivo_saida") == "take_profit"]
+
+    _bloco("STOP-LOSS", stops)
+    _bloco("TIMEOUT", timeouts)
+    _bloco("TAKE-PROFIT", tps)
+
+    # veredicto simples sobre o stop-loss
+    if stops:
+        subiram = sum(1 for h in stops if (h.get("var_pos_venda_pct") or 0) > 0)
+        pct = subiram / len(stops) * 100
+        print("   -----")
+        if pct >= 60:
+            print(f"   👉 {pct:.0f}% dos stop-losses SUBIRAM depois de vender: o stop")
+            print("      parece APERTADO — alargar STOP_LOSS_PCT deve ajudar.")
+        elif pct <= 35:
+            print(f"   👉 só {pct:.0f}% recuperaram: o stop está a proteger bem de rugs.")
+            print("      Alargar iria só aumentar as perdas — não recomendado.")
+        else:
+            print(f"   👉 {pct:.0f}% recuperaram: zona cinzenta. Alargar um pouco (ex: -35%)")
+            print("      e voltar a medir é o mais sensato.")
 
 
 def _analise_padroes(compras: list[dict], vendas: list[dict]):
