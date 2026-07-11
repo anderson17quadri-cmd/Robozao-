@@ -8,6 +8,11 @@ sem aviso se o pump.fun mudar a API.
 Devolve apenas CANDIDATOS crus: {mint, name, created_at}. O dispatcher (fontes.py)
 padroniza-os depois via GeckoTerminal para o formato completo que o trader espera.
 
+Ranking usado: TRENDING (atividade de trading recente), para ficar próximo do que
+a app do pump.fun mostra em destaque — em vez de simplesmente "os mais recentes".
+A API não-oficial não expõe um ranking de volume limpo numa só chamada, por isso
+usamos `last_trade_timestamp` (tokens a ser negociados agora) como proxy de trending.
+
 Toda chamada em try/except: uma falha devolve lista vazia e nunca derruba o loop.
 """
 
@@ -24,16 +29,20 @@ _HEADERS = {
     "Referer": "https://pump.fun/",
 }
 
+# Campo de ordenação = proxy de "trending" (atividade recente).
+# Alternativas fáceis de trocar: "market_cap" (maiores) ou "created_timestamp" (novos).
+_SORT = "last_trade_timestamp"
+
 
 def get_new_candidates() -> list[dict]:
     """
-    Tokens pump.fun recentes, ordenados por criação (mais novos primeiro).
-    Devolve [{mint, name, created_at}]. Só descoberta — sem preço/liquidez aqui.
+    Tokens pump.fun em DESTAQUE por atividade recente (trending), mais ativos
+    primeiro. Devolve [{mint, name, created_at}]. Só descoberta — sem preço aqui.
     """
     params = {
         "offset": 0,
         "limit": 50,
-        "sort": "created_timestamp",
+        "sort": _SORT,
         "order": "DESC",
         "includeNsfw": "false",
     }
