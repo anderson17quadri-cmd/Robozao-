@@ -386,6 +386,8 @@ Proteções que continuam sempre a valer:
 | `config.py` | Lê o `.env` (parser próprio, sem dependências) |
 | `gecko.py` | GeckoTerminal — deteção de tokens e preços |
 | `solana_rpc.py` | Check de autoridades do mint (fail-closed, rate-limited) |
+| `rugcheck.py` | Análise de contrato via RugCheck.xyz (score/insiders/LP) |
+| `analisar_contratos.py` | Compara rugs vs vencedores no RugCheck (mede se ajuda) |
 | `ratelimit.py` | Rate limiter (N pedidos/seg) — evita rate limit do RPC |
 | `wallet.py` | Carrega a wallet (nunca loga a chave) |
 | `jupiter.py` | Swaps reais (quote + swap) — só modo real |
