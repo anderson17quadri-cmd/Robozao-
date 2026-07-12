@@ -61,8 +61,13 @@ class BotController:
         while not self._stop.is_set():
             agora = time.time()
             try:
+                # verifica o pedido de paragem ENTRE cada fase (cada fase tem
+                # chamadas de rede) — assim desliga em segundos, não só no fim
+                # da volta inteira.
                 # 1) monitoriza posições abertas (mais frequente)
                 trader.verificar_posicoes()
+                if self._stop.is_set():
+                    break
 
                 # 2) procura tokens novos (menos frequente)
                 if agora - ultimo_scan >= CFG.intervalo_scan_segundos:
@@ -75,16 +80,21 @@ class BotController:
                         if self._stop.is_set():
                             break
                         trader.avaliar_e_comprar(pool)
-                    STATE.ultima_msg = (
-                        f"{modo} [{CFG.fonte_deteccao}] — {len(pools)} pools, "
-                        f"{len(STATE.posicoes)} posições abertas, "
-                        f"{watchlist.tamanho()} em vigia"
-                    )
+                    if not self._stop.is_set():
+                        STATE.ultima_msg = (
+                            f"{modo} [{CFG.fonte_deteccao}] — {len(pools)} pools, "
+                            f"{len(STATE.posicoes)} posições abertas, "
+                            f"{watchlist.tamanho()} em vigia"
+                        )
+                if self._stop.is_set():
+                    break
 
                 # 3) acompanha (só leitura) os tokens já vendidos — cadência lenta
                 if agora - ultimo_acompanhamento >= CFG.intervalo_acompanhar_vendidos_segundos:
                     ultimo_acompanhamento = agora
                     trader.acompanhar_vendidos()
+                if self._stop.is_set():
+                    break
 
                 # 4) reavalia a lista de vigia — tokens que podem ter crescido
                 # até passar a liquidez/mcap desde que saíram do feed new_pools

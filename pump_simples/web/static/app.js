@@ -295,6 +295,8 @@
 
   // ---------- ações ----------
   async function toggle(confirmarReal) {
+    const btn = $("toggleBtn");
+    const eraLigado = btn.classList.contains("on");   // estávamos a desligar?
     try {
       const r = await fetch("/api/toggle", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -307,7 +309,19 @@
         return;
       }
       await poll();
-    } catch (e) { /* ignora */ }
+      if (eraLigado) {
+        // desligar pode demorar 1 volta do loop a terminar as chamadas de rede
+        // em curso — dá feedback imediato e confirma o estado real depressa.
+        $("statusLine").textContent = "a desligar…";
+        btn.disabled = true;
+        for (let i = 0; i < 10; i++) {
+          await new Promise((res) => setTimeout(res, 700));
+          await poll();
+          if (!btn.classList.contains("on")) break;   // já desligou
+        }
+        btn.disabled = false;
+      }
+    } catch (e) { btn.disabled = false; }
   }
 
   async function venderPosicao(id, nome) {

@@ -67,6 +67,7 @@ body{
   transition:transform .12s ease,filter .12s ease;
 }
 .toggle:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.toggle:disabled{opacity:.6;cursor:wait;transform:none}
 .toggle .dot{width:9px;height:9px;border-radius:50%;background:#04150d}
 .toggle.on{background:linear-gradient(180deg,#ff5f6f,#ec3346);color:#fff;
   box-shadow:0 6px 20px rgba(255,77,94,.35)}
