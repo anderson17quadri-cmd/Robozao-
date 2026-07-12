@@ -9,6 +9,7 @@ Dashboard web do robozão (Flask).
 Corre o bot na MESMA processo, numa thread de fundo (BotController).
 """
 
+import sys
 import time
 from pathlib import Path
 
@@ -245,12 +246,23 @@ def api_meta(pos_id):
 
 
 def main():
+    autostart = "--autostart" in sys.argv or "-a" in sys.argv
     modo = "REAL ⚠️" if CFG.envio_real_armado else "DRY_RUN (simulado)"
     print("=" * 60)
     print(" robozão — dashboard pump.fun")
     print(f"  modo...: {modo}")
     print(f"  wallet.: {wallet_status()}")
     print(f"  http://{CFG.dashboard_host}:{CFG.dashboard_port}")
+
+    # arranque automático do bot (atalho 'robozao'): SÓ em DEMO. Em modo real
+    # o bot nunca arranca sozinho — tem de ser pelo botão, com confirmação.
+    if autostart:
+        if CFG.envio_real_armado:
+            print("  ⚠️  autostart IGNORADO — bot em MODO REAL. Arranca-o à mão no")
+            print("      dashboard (com confirmação), por segurança.")
+        elif CONTROLLER.start():
+            print("  ▶️  bot ARRANCADO automaticamente (DEMO / simulado)")
+
     print("=" * 60)
     # use_reloader=False: senão o Flask arranca 2 processos e duplica o bot
     app.run(host=CFG.dashboard_host, port=CFG.dashboard_port,

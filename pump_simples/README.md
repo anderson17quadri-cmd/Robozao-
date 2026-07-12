@@ -316,6 +316,25 @@ python dashboard.py
 Depois abre no browser do telemóvel: **http://localhost:5000** e carrega em
 "LIGAR BOT".
 
+### Atalho `robozao` (arranca tudo com uma palavra)
+
+Para não teres de escrever o caminho e o comando todas as vezes, cria um
+atalho que liga o dashboard **e** arranca o bot (em DEMO) de uma só vez.
+Corre isto **uma vez**, de dentro da pasta `pump_simples`:
+
+```bash
+echo "alias robozao='cd $PWD && python dashboard.py --autostart'" >> ~/.bashrc
+source ~/.bashrc
+```
+
+A partir daí, basta escreveres `robozao` em qualquer altura no Termux — abre
+o dashboard em http://localhost:5000 com o bot já a correr. `Ctrl+C` pára tudo.
+
+A flag `--autostart` só arranca o bot em **DEMO** (simulado). Se o `.env`
+estiver configurado para arrancar em real, o autostart é ignorado por
+segurança — o modo real tem sempre de ser ligado à mão no botão, com
+confirmação.
+
 **Notas Termux:**
 - Em DRY_RUN, `WALLET_PRIVATE_KEY` pode ficar vazia. Só a `SOLANA_RPC_URL` é
   útil (para o bot confirmar as autoridades dos mints); sem ela, o bot rejeita
