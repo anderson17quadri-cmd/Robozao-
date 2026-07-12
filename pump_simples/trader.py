@@ -114,17 +114,25 @@ def avaliar_e_comprar(pool: dict) -> None:
                   motivo="sem_preco")
         return
 
-    # --- Regra 4: market cap mínimo à entrada (0 = desligado; hype salta este) ---
-    # pump.fun tem ~1e9 de supply => market cap ≈ preço * 1e9.
-    if STATE.marketcap_minimo_usd > 0 and not qualifica_hype:
-        marketcap = preco * PUMP_SUPPLY_ESTIMADO
-        if marketcap < STATE.marketcap_minimo_usd:
-            log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
-                      motivo="marketcap_baixo", marketcap_usd=marketcap,
-                      minimo=STATE.marketcap_minimo_usd, preco=preco)
-            if STATE.vigia_ativo:
-                watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
-            return
+    # --- Regra 4: market cap à entrada (pump.fun tem ~1e9 de supply => mcap ≈ preço * 1e9) ---
+    marketcap = preco * PUMP_SUPPLY_ESTIMADO
+    # 4a) MÍNIMO (0 = desligado; o hype salta este — moedas pequenas com tração)
+    if (STATE.marketcap_minimo_usd > 0 and not qualifica_hype
+            and marketcap < STATE.marketcap_minimo_usd):
+        log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
+                  motivo="marketcap_baixo", marketcap_usd=marketcap,
+                  minimo=STATE.marketcap_minimo_usd, preco=preco)
+        if STATE.vigia_ativo:
+            watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
+        return
+    # 4b) TETO/MÁXIMO (0 = desligado; aplica-se SEMPRE, mesmo no hype). É o
+    # padrão mais forte dos rugs: mcap alto = comprado perto do topo. NÃO vai
+    # para a vigia (é caro demais, não "cresce para baixo").
+    if STATE.marketcap_maximo_usd > 0 and marketcap > STATE.marketcap_maximo_usd:
+        log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
+                  motivo="marketcap_alto", marketcap_usd=marketcap,
+                  maximo=STATE.marketcap_maximo_usd, preco=preco)
+        return
 
     # --- Regra 2: autoridades revogadas (fail-closed) ---
     seg = check_mint_authorities(mint)

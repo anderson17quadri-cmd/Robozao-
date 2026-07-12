@@ -270,6 +270,7 @@
     // filtros editáveis — não sobrescreve enquanto escreves
     setInputSeNaoFocado("liqInput", state.liquidez_minima_usd);
     setInputSeNaoFocado("mcapInput", state.marketcap_minimo_usd);
+    setInputSeNaoFocado("mcapMaxInput", state.marketcap_maximo_usd);
   }
 
   function setInputSeNaoFocado(id, valor) {
@@ -464,6 +465,7 @@
   };
   bindFiltro("liqInput", "liquidez_minima_usd", "liqSave");
   bindFiltro("mcapInput", "marketcap_minimo_usd", "mcapSave");
+  bindFiltro("mcapMaxInput", "marketcap_maximo_usd", "mcapMaxSave");
 
   $("tradeInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") salvarValorEntrada();

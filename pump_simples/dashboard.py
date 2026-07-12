@@ -72,6 +72,7 @@ def _modo_info() -> dict:
         "timeout_isento_acima_pct": CFG.timeout_isento_acima_pct,
         "liquidez_minima_usd": CFG.liquidez_minima_usd,
         "marketcap_minimo_usd": CFG.marketcap_minimo_usd,
+        "marketcap_maximo_usd": CFG.marketcap_maximo_usd,
         "max_trade_usd": CFG.max_trade_usd,
         "slippage_simulado_pct": (0 if CFG.envio_real_armado else CFG.slippage_simulado_pct),
         "intervalo_verificacao": CFG.intervalo_verificacao_segundos,
@@ -192,6 +193,7 @@ def api_config():
         "max_trade_usd": STATE.set_max_trade,
         "liquidez_minima_usd": STATE.set_liquidez_minima,
         "marketcap_minimo_usd": STATE.set_marketcap_minimo,
+        "marketcap_maximo_usd": STATE.set_marketcap_maximo,
     }
     atualizados = {}
     for campo, setter in campos.items():

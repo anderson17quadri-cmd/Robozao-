@@ -77,6 +77,11 @@
         <input type="number" id="mcapInput" class="cfg-input" step="1000" min="0" placeholder="10000">
         <button id="mcapSave" class="btn-mini">ok</button>
       </div>
+      <div class="cfg-edit">
+        <label title="Teto: não compra acima disto. É a maior defesa contra rugs. 0 = desligado.">market cap MÁX $</label>
+        <input type="number" id="mcapMaxInput" class="cfg-input" step="1000" min="0" placeholder="40000">
+        <button id="mcapMaxSave" class="btn-mini">ok</button>
+      </div>
     </div>
   </div>
 
@@ -109,7 +114,7 @@
       acima de +{{ '%.0f'|format(modo.trailing_aperto_acima_pct) }}%)</span>
     {% if modo.timeout_minutos and modo.timeout_minutos > 0 %}<span>timeout <b>{{ '%.0f'|format(modo.timeout_minutos) }}min</b>{% if modo.timeout_isento_acima_pct and modo.timeout_isento_acima_pct > 0 %} (isento &gt;+{{ '%.0f'|format(modo.timeout_isento_acima_pct) }}%){% endif %}</span>{% else %}<span>timeout <b>off</b></span>{% endif %}
     <span>trade máx <b id="footTrade">{{ modo.moeda_simbolo }}{{ '%.0f'|format(modo.max_trade_usd) }}</b></span>
-    <span>mcap mín <b>${{ '%.0f'|format(modo.marketcap_minimo_usd) }}</b></span>
+    <span>mcap <b>${{ '%.0f'|format(modo.marketcap_minimo_usd) }}</b>–{% if modo.marketcap_maximo_usd and modo.marketcap_maximo_usd > 0 %}<b>${{ '%.0f'|format(modo.marketcap_maximo_usd) }}</b>{% else %}<b>∞</b>{% endif %}</span>
     {% if modo.slippage_simulado_pct %}<span>slippage sim <b>{{ '%.0f'|format(modo.slippage_simulado_pct) }}%</b></span>{% endif %}
     <span class="sec-note">segurança: mint+freeze revogados (fail-closed)</span>
   </footer>

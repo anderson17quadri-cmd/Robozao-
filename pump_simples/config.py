@@ -77,6 +77,10 @@ class Config:
     # rugam (enchem a -99%); os que sobem tinham ~$31k. Editável no dashboard.
     liquidez_minima_usd: float = 10000.0
     marketcap_minimo_usd: float = 10000.0     # 0 = desligado (mcap ≈ preço * 1e9)
+    # TETO de market cap: NÃO compra acima disto. É o padrão mais forte dos
+    # rugs — comprar a mcap alto = comprar perto do topo, com muito para cair.
+    # Os dados mostraram -€179 sem teto -> +€753 com teto a ~$35-40k. 0 = off.
+    marketcap_maximo_usd: float = 40000.0
 
     # --- Canal HYPE (opcional, toggle no dashboard) ---
     # Quando ligado, compra também tokens com tração real (compradores + volume)
@@ -221,6 +225,7 @@ def load_config() -> Config:
         bitquery_api_key=_get("BITQUERY_API_KEY", ""),
         liquidez_minima_usd=_get_float("LIQUIDEZ_MINIMA_USD", 10000.0),
         marketcap_minimo_usd=_get_float("MARKETCAP_MINIMO_USD", 10000.0),
+        marketcap_maximo_usd=_get_float("MARKETCAP_MAXIMO_USD", 40000.0),
         hype_ativo=_get_bool("HYPE_ATIVO", False),
         hype_min_compradores=_get_int("HYPE_MIN_COMPRADORES", 40),
         hype_min_volume_usd=_get_float("HYPE_MIN_VOLUME_USD", 10000.0),

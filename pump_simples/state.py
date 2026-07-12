@@ -26,6 +26,7 @@ class AppState:
         self.max_trade_usd: float = CFG.max_trade_usd
         self.liquidez_minima_usd: float = CFG.liquidez_minima_usd
         self.marketcap_minimo_usd: float = CFG.marketcap_minimo_usd
+        self.marketcap_maximo_usd: float = CFG.marketcap_maximo_usd
         self.hype_ativo: bool = CFG.hype_ativo   # canal hype ligado/desligado
         self.vigia_ativo: bool = CFG.vigia_ativo  # lista de vigia ligada/desligada
         self._load()
@@ -41,6 +42,7 @@ class AppState:
             self.max_trade_usd = data.get("max_trade_usd", self.max_trade_usd)
             self.liquidez_minima_usd = data.get("liquidez_minima_usd", self.liquidez_minima_usd)
             self.marketcap_minimo_usd = data.get("marketcap_minimo_usd", self.marketcap_minimo_usd)
+            self.marketcap_maximo_usd = data.get("marketcap_maximo_usd", self.marketcap_maximo_usd)
             self.hype_ativo = data.get("hype_ativo", self.hype_ativo)
             self.vigia_ativo = data.get("vigia_ativo", self.vigia_ativo)
         except FileNotFoundError:
@@ -57,6 +59,7 @@ class AppState:
                 "max_trade_usd": self.max_trade_usd,
                 "liquidez_minima_usd": self.liquidez_minima_usd,
                 "marketcap_minimo_usd": self.marketcap_minimo_usd,
+                "marketcap_maximo_usd": self.marketcap_maximo_usd,
                 "hype_ativo": self.hype_ativo,
                 "vigia_ativo": self.vigia_ativo,
                 "atualizado_em": time.time(),
@@ -268,6 +271,15 @@ class AppState:
             self._save_locked()
             return True
 
+    def set_marketcap_maximo(self, valor) -> bool:
+        v = self._to_float(valor, permite_zero=True)   # 0 = teto desligado
+        if v is None:
+            return False
+        with self._lock:
+            self.marketcap_maximo_usd = v
+            self._save_locked()
+            return True
+
     def set_hype_ativo(self, ativo) -> bool:
         with self._lock:
             self.hype_ativo = bool(ativo)
@@ -293,6 +305,7 @@ class AppState:
                 "max_trade_usd": round(self.max_trade_usd, 4),
                 "liquidez_minima_usd": round(self.liquidez_minima_usd, 2),
                 "marketcap_minimo_usd": round(self.marketcap_minimo_usd, 2),
+                "marketcap_maximo_usd": round(self.marketcap_maximo_usd, 2),
                 "hype_ativo": self.hype_ativo,
                 "vigia_ativo": self.vigia_ativo,
                 "pl_aberto_usd": round(pl_aberto, 4),
