@@ -5,8 +5,8 @@ requests>=2.31
 flask>=3.0
 
 # --- Necessário SÓ para modo REAL (assinar/enviar transações Solana) ---
-# Podes instalar só quando fores mesmo trocar para real.
-# PyNaCl (ed25519) + base58 — leves, sem compilação Rust (ao contrário do
-# solders, que falha facilmente no Termux, sobretudo em Python muito recente).
-pynacl>=1.5
+# Só base58 (puro Python, sem compilação nenhuma). A assinatura ed25519 é
+# feita pelo módulo próprio `ed25519_pure.py` (stdlib only) — de propósito,
+# depois de solders (Rust/PyO3) e pynacl (C/libsodium) terem ambos falhado
+# a compilar no Termux. base58 nunca teve esse problema (é wheel puro).
 base58>=2.1

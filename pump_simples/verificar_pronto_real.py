@@ -37,8 +37,8 @@ def main():
     else:
         tudo_ok = False
         print(f"   ❌ wallet: {wallet_status()} — não consegui obter o endereço público.")
-        print("      Verifica WALLET_PRIVATE_KEY no .env e se as libs estão instaladas:")
-        print("      pip install pynacl base58")
+        print("      Verifica WALLET_PRIVATE_KEY no .env e se a lib está instalada:")
+        print("      pip install base58")
 
     # 2) RPC Solana
     _titulo(2, "RPC Solana")

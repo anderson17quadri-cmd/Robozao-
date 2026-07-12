@@ -224,7 +224,8 @@ cd pump_simples
 python3 -m venv .venv && source .venv/bin/activate
 
 # dependências (dashboard + DRY_RUN precisam só de requests+flask;
-# 'pynacl'+'base58' só são precisos para modo real, e instalam-se em segundos)
+# 'base58' só é preciso para modo real, e instala-se em segundos — sem
+# compilação nenhuma, mesmo no Termux)
 pip install -r requirements.txt
 ```
 
@@ -309,10 +310,13 @@ Depois abre no browser do telemóvel: **http://localhost:5000** e carrega em
 - Em DRY_RUN, `WALLET_PRIVATE_KEY` pode ficar vazia. Só a `SOLANA_RPC_URL` é
   útil (para o bot confirmar as autoridades dos mints); sem ela, o bot rejeita
   tudo por fail-closed — seguro, mas não simula compras.
-- O modo **REAL** precisa de `pynacl` + `base58` (`pip install pynacl base58`)
-  para assinar transações — são leves e instalam-se em segundos, sem precisar
-  de Rust/compilação (ao contrário do `solders`, que costuma falhar no Termux,
-  sobretudo em Python muito recente).
+- O modo **REAL** precisa só de `base58` (`pip install base58`) para assinar
+  transações. A assinatura ed25519 em si é feita por um módulo próprio em
+  Python puro (`ed25519_pure.py`, sem nenhuma dependência C/Rust) — depois de
+  o `solders` (Rust/PyO3) e o `pynacl` (C/libsodium) terem ambos falhado a
+  compilar em Termux (Python 3.14 sem suporte PyO3; depois erro
+  `memset_explicit` no libsodium bundled do NDK/Clang do Android). Python
+  puro nunca precisa de compilar nada — funciona em qualquer telemóvel.
 - Se `localhost` não abrir, confirma a porta no `.env` (`DASHBOARD_PORT`).
 
 ---
@@ -337,8 +341,8 @@ PERMITIR_ENVIO_REAL=true
 
 Só quando **ambas** estão assim é que alguma transação real acontece. E mesmo
 assim, no dashboard ainda tens de **confirmar no popup** antes de o bot arrancar
-em real. Instala também `pynacl` + `base58` (`pip install pynacl base58`) para
-assinar as transações — leve, sem compilação.
+em real. Instala também `base58` (`pip install base58`) — a assinatura em si
+é feita em Python puro, sem compilação nenhuma.
 
 ---
 

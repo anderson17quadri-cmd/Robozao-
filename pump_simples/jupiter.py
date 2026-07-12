@@ -73,7 +73,8 @@ def _read_compact_u16(data: bytes, offset: int) -> tuple[int, int]:
 def _assinar_transacao_bruta(raw_tx: bytes, signing_key) -> bytes:
     """
     Assina uma VersionedTransaction serializada da Jupiter (bytes crus, ainda
-    sem assinatura) usando PyNaCl — sem depender do solders/Rust.
+    sem assinatura) usando ed25519_pure (Python puro) — sem depender do
+    solders/Rust nem do pynacl/libsodium.
 
     Formato wire da Solana: [compact-u16 nº assinaturas][N * 64 bytes de
     assinatura (vazias)][mensagem]. Assume UM único signatário (a nossa
@@ -84,7 +85,7 @@ def _assinar_transacao_bruta(raw_tx: bytes, signing_key) -> bytes:
     fim_assinaturas = inicio_assinaturas + num_sigs * 64
     mensagem = raw_tx[fim_assinaturas:]
 
-    assinatura = signing_key.sign(mensagem).signature  # 64 bytes ed25519
+    assinatura = signing_key.sign(mensagem)  # 64 bytes ed25519
 
     tx_assinada = bytearray(raw_tx)
     tx_assinada[inicio_assinaturas:inicio_assinaturas + 64] = assinatura
@@ -92,7 +93,7 @@ def _assinar_transacao_bruta(raw_tx: bytes, signing_key) -> bytes:
 
 
 def _sign_and_send(swap_tx_b64: str) -> str | None:
-    """Assina a tx com a wallet (PyNaCl) e envia via RPC. Devolve a signature ou None."""
+    """Assina a tx com a wallet (ed25519_pure) e envia via RPC. Devolve a signature ou None."""
     import base64
 
     from wallet import get_signing_key
