@@ -108,7 +108,9 @@ class Config:
     trailing_stop_apertado_pct: float = 15.0
     trailing_aperto_acima_pct: float = 100.0
     stop_loss_pct: float = 25.0   # LEGADO: já não é usado (substituído pelo trailing)
-    timeout_minutos: float = 10.0   # 0 = SEM timeout (só sai pelo trailing)
+    # subido de 10 -> 20min: os dados mostraram 97% dos timeouts a SUBIREM depois
+    # de vender (mediana +18%) — 10min era pouco tempo p/ muitas moedas "acordarem".
+    timeout_minutos: float = 20.0   # 0 = SEM timeout (só sai pelo trailing)
     # posições cujo PICO já passou este ganho ficam ISENTAS do timeout (são "runners"
     # e passam a ser geridas só pelo trailing). 0 = timeout aplica-se a todas.
     timeout_isento_acima_pct: float = 50.0
@@ -207,7 +209,7 @@ def load_config() -> Config:
         trailing_stop_apertado_pct=_get_float("TRAILING_STOP_APERTADO_PCT", 15.0),
         trailing_aperto_acima_pct=_get_float("TRAILING_APERTO_ACIMA_PCT", 100.0),
         stop_loss_pct=_get_float("STOP_LOSS_PCT", 25.0),
-        timeout_minutos=_get_float("TIMEOUT_MINUTOS", 10.0),
+        timeout_minutos=_get_float("TIMEOUT_MINUTOS", 20.0),
         timeout_isento_acima_pct=_get_float("TIMEOUT_ISENTO_ACIMA_PCT", 50.0),
         intervalo_verificacao_segundos=_get_int("INTERVALO_VERIFICACAO_SEGUNDOS", 5),
         max_trade_usd=_get_float("MAX_TRADE_USD", 2.0),
