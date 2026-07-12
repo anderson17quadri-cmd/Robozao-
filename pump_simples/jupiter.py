@@ -54,21 +54,54 @@ def _build_swap_tx(quote: dict, user_pubkey: str) -> str | None:
         return None
 
 
+def _read_compact_u16(data: bytes, offset: int) -> tuple[int, int]:
+    """
+    Lê um compact-u16 (codificação shortvec da Solana, usada p/ contar
+    assinaturas/contas/etc no formato wire da transação). Devolve (valor, novo_offset).
+    """
+    valor = 0
+    comprimento = 0
+    while True:
+        elem = data[offset + comprimento]
+        valor |= (elem & 0x7F) << (comprimento * 7)
+        comprimento += 1
+        if elem & 0x80 == 0:
+            break
+    return valor, offset + comprimento
+
+
+def _assinar_transacao_bruta(raw_tx: bytes, signing_key) -> bytes:
+    """
+    Assina uma VersionedTransaction serializada da Jupiter (bytes crus, ainda
+    sem assinatura) usando PyNaCl — sem depender do solders/Rust.
+
+    Formato wire da Solana: [compact-u16 nº assinaturas][N * 64 bytes de
+    assinatura (vazias)][mensagem]. Assume UM único signatário (a nossa
+    wallet como fee payer) — o mesmo pressuposto que o código anterior
+    (solders) já fazia.
+    """
+    num_sigs, inicio_assinaturas = _read_compact_u16(raw_tx, 0)
+    fim_assinaturas = inicio_assinaturas + num_sigs * 64
+    mensagem = raw_tx[fim_assinaturas:]
+
+    assinatura = signing_key.sign(mensagem).signature  # 64 bytes ed25519
+
+    tx_assinada = bytearray(raw_tx)
+    tx_assinada[inicio_assinaturas:inicio_assinaturas + 64] = assinatura
+    return bytes(tx_assinada)
+
+
 def _sign_and_send(swap_tx_b64: str) -> str | None:
-    """Assina a tx com a wallet e envia via RPC. Devolve a signature ou None."""
+    """Assina a tx com a wallet (PyNaCl) e envia via RPC. Devolve a signature ou None."""
     import base64
 
-    from solders.transaction import VersionedTransaction  # type: ignore
-    from solders.keypair import Keypair  # noqa: F401  (garante dependência)
-
-    from wallet import get_keypair
+    from wallet import get_signing_key
 
     try:
-        kp = get_keypair()
+        sk = get_signing_key()
         raw = base64.b64decode(swap_tx_b64)
-        unsigned = VersionedTransaction.from_bytes(raw)
-        signed = VersionedTransaction(unsigned.message, [kp])
-        signed_b64 = base64.b64encode(bytes(signed)).decode("utf-8")
+        tx_assinada = _assinar_transacao_bruta(raw, sk)
+        signed_b64 = base64.b64encode(tx_assinada).decode("utf-8")
 
         payload = {
             "jsonrpc": "2.0",
