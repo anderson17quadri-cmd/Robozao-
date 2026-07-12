@@ -105,7 +105,8 @@ def avaliar_e_comprar(pool: dict) -> None:
         log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                   motivo="liquidez_baixa", liquidez_usd=liquidez,
                   minimo=STATE.liquidez_minima_usd)
-        watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
+        if STATE.vigia_ativo:
+            watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
         return
 
     if not preco or preco <= 0:
@@ -121,7 +122,8 @@ def avaliar_e_comprar(pool: dict) -> None:
             log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
                       motivo="marketcap_baixo", marketcap_usd=marketcap,
                       minimo=STATE.marketcap_minimo_usd, preco=preco)
-            watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
+            if STATE.vigia_ativo:
+                watchlist.adicionar(pool)   # pode crescer — fica em vigia por um tempo
             return
 
     # --- Regra 2: autoridades revogadas (fail-closed) ---
@@ -303,7 +305,14 @@ def revisar_lista_vigia() -> None:
 
     Verifica só CFG.vigia_max_por_ciclo por chamada (os há mais tempo sem
     verificar primeiro), para não disparar chamadas de rede a mais de uma vez.
+
+    Se a vigia estiver desligada (STATE.vigia_ativo=False), não faz nada e
+    esvazia o que houver — os dados mostraram que a vigia perdia dinheiro.
     """
+    if not STATE.vigia_ativo:
+        watchlist.limpar_tudo()
+        return
+
     expirados = watchlist.limpar_expirados()
     if expirados:
         log_event(CFG.log_file, "vigia_expirado", quantidade=expirados)

@@ -249,6 +249,14 @@
       hb.textContent = "🔥 HYPE: " + (on ? "on" : "off");
     }
 
+    // botão VIGIA (on/off)
+    const vb = $("vigiaBtn");
+    if (vb) {
+      const on = !!state.vigia_ativo;
+      vb.classList.toggle("on", on); vb.classList.toggle("off", !on);
+      vb.textContent = "👁 VIGIA: " + (on ? "on" : "off");
+    }
+
     // valor por entrada — não sobrescreve enquanto o utilizador escreve
     $("cfgCur").textContent = SIM;
     const ti = $("tradeInput");
@@ -432,11 +440,17 @@
     catch (e) { /* ignora */ }
   }
 
+  async function toggleVigia() {
+    try { await fetch("/api/vigia", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); await poll(); }
+    catch (e) { /* ignora */ }
+  }
+
   // ---------- eventos ----------
   $("toggleBtn").addEventListener("click", () => toggle(false));
   $("modeBtn").addEventListener("click", () => toggleModo(false));
   $("resetBtn").addEventListener("click", reiniciar);
   $("hypeBtn").addEventListener("click", toggleHype);
+  $("vigiaBtn").addEventListener("click", toggleVigia);
   $("tradeSave").addEventListener("click", salvarValorEntrada);
   // grava também ao sair do campo (não precisas de carregar no "ok")
   $("tradeInput").addEventListener("change", salvarValorEntrada);

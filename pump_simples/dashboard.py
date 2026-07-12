@@ -215,6 +215,17 @@ def api_hype():
     return jsonify({"ok": True, "hype_ativo": STATE.hype_ativo})
 
 
+@app.route("/api/vigia", methods=["POST"])
+def api_vigia():
+    """Liga/desliga a lista de vigia (persiste). Desligada perde menos (ver dados)."""
+    body = request.get_json(silent=True) or {}
+    if "ativo" in body:
+        STATE.set_vigia_ativo(bool(body.get("ativo")))
+    else:
+        STATE.set_vigia_ativo(not STATE.vigia_ativo)   # toggle
+    return jsonify({"ok": True, "vigia_ativo": STATE.vigia_ativo})
+
+
 @app.route("/api/reset", methods=["POST"])
 def api_reset():
     """Reinicia a simulação (saldo inicial, sem posições/histórico). Só DRY_RUN."""

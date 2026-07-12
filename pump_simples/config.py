@@ -92,6 +92,13 @@ class Config:
     # (com dados frescos) por este tempo, em vez de serem descartados para sempre
     # assim que saem do feed new_pools (~1min de idade). Compra se crescerem o
     # suficiente. NUNCA salta segurança — só dá tempo ao token de crescer.
+    #
+    # DESLIGADA POR DEFAULT: os dados mostraram que os trades vindos da vigia
+    # (origem=vigia) perdiam muito mais que os do scan direto (51 trades, 16%
+    # win, -€530, vs scan +€375). Comprar moedas que já tinham sido rejeitadas
+    # é comprar "segundas oportunidades" que na prática já iam a cair. Podes
+    # religar no dashboard (botão 👁 VIGIA) ou com VIGIA_ATIVO=true no .env.
+    vigia_ativo: bool = False
     vigia_ttl_minutos: float = 60.0
     vigia_max_por_ciclo: int = 15
 
@@ -217,6 +224,7 @@ def load_config() -> Config:
         hype_ativo=_get_bool("HYPE_ATIVO", False),
         hype_min_compradores=_get_int("HYPE_MIN_COMPRADORES", 40),
         hype_min_volume_usd=_get_float("HYPE_MIN_VOLUME_USD", 10000.0),
+        vigia_ativo=_get_bool("VIGIA_ATIVO", False),
         vigia_ttl_minutos=_get_float("VIGIA_TTL_MINUTOS", 60.0),
         vigia_max_por_ciclo=_get_int("VIGIA_MAX_POR_CICLO", 15),
         take_profit_pct=_get_float("TAKE_PROFIT_PCT", 0.0),

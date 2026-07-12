@@ -76,6 +76,9 @@ body{
 .btn-hype{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
   border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
 .btn-hype.on{color:#1a1205;background:linear-gradient(180deg,#ffc24d,#ffb020);border-color:transparent}
+.btn-vigia{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+  border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
+.btn-vigia.on{color:#08160e;background:linear-gradient(180deg,#5eead4,#2dd4bf);border-color:transparent}
 .btn-mode{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
   border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:800;font-size:12px;
   min-width:98px;text-align:center;transition:background .12s,color .12s,border-color .12s}

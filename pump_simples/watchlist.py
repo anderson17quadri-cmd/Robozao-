@@ -62,5 +62,10 @@ def candidatos_para_verificar(limite: int) -> list[dict]:
     return [dict(e["pool"]) for e in itens[:limite]]
 
 
+def limpar_tudo() -> None:
+    """Esvazia a lista de vigia (usado quando a vigia é desligada)."""
+    _watchlist.clear()
+
+
 def tamanho() -> int:
     return len(_watchlist)

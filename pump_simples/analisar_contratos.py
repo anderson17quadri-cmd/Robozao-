@@ -28,6 +28,37 @@ BASE = Path(__file__).resolve().parent
 
 
 def _carregar_historico() -> list[dict]:
+    """
+    Fonte dos trades fechados. Prefere o LOG (decisions.jsonl): é append-only e
+    sobrevive a reinícios da simulação, por isso tem TODOS os trades (incl. os
+    vencedores antigos). O state.json é limpo no "Reiniciar" e às vezes só tem
+    os últimos — usa-se só como recurso se o log não existir.
+    """
+    log = BASE / "decisions.jsonl"
+    if log.exists():
+        trades = []
+        vistos = set()
+        for linha in log.read_text(encoding="utf-8").splitlines():
+            linha = linha.strip()
+            if not linha:
+                continue
+            try:
+                ev = json.loads(linha)
+            except Exception:
+                continue
+            if ev.get("tipo") != "venda":
+                continue
+            # 1 entrada por mint (a mais recente); evita repetir a mesma moeda
+            mint = ev.get("mint")
+            chave = mint or ev.get("pos_id") or id(ev)
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            trades.append({"name": ev.get("name"), "mint": mint,
+                           "pl_pct": ev.get("pl_pct"), "motivo_saida": ev.get("motivo")})
+        if trades:
+            return trades
+
     p = BASE / "state.json"
     if not p.exists():
         return []

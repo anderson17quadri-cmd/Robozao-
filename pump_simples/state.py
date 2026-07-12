@@ -27,6 +27,7 @@ class AppState:
         self.liquidez_minima_usd: float = CFG.liquidez_minima_usd
         self.marketcap_minimo_usd: float = CFG.marketcap_minimo_usd
         self.hype_ativo: bool = CFG.hype_ativo   # canal hype ligado/desligado
+        self.vigia_ativo: bool = CFG.vigia_ativo  # lista de vigia ligada/desligada
         self._load()
 
     # ---------- persistência ----------
@@ -41,6 +42,7 @@ class AppState:
             self.liquidez_minima_usd = data.get("liquidez_minima_usd", self.liquidez_minima_usd)
             self.marketcap_minimo_usd = data.get("marketcap_minimo_usd", self.marketcap_minimo_usd)
             self.hype_ativo = data.get("hype_ativo", self.hype_ativo)
+            self.vigia_ativo = data.get("vigia_ativo", self.vigia_ativo)
         except FileNotFoundError:
             pass
         except Exception as exc:
@@ -56,6 +58,7 @@ class AppState:
                 "liquidez_minima_usd": self.liquidez_minima_usd,
                 "marketcap_minimo_usd": self.marketcap_minimo_usd,
                 "hype_ativo": self.hype_ativo,
+                "vigia_ativo": self.vigia_ativo,
                 "atualizado_em": time.time(),
             }
             tmp = CFG.state_file + ".tmp"
@@ -271,6 +274,12 @@ class AppState:
             self._save_locked()
             return self.hype_ativo
 
+    def set_vigia_ativo(self, ativo) -> bool:
+        with self._lock:
+            self.vigia_ativo = bool(ativo)
+            self._save_locked()
+            return self.vigia_ativo
+
     def snapshot(self) -> dict:
         """Cópia segura para o dashboard (sem segredos)."""
         with self._lock:
@@ -285,6 +294,7 @@ class AppState:
                 "liquidez_minima_usd": round(self.liquidez_minima_usd, 2),
                 "marketcap_minimo_usd": round(self.marketcap_minimo_usd, 2),
                 "hype_ativo": self.hype_ativo,
+                "vigia_ativo": self.vigia_ativo,
                 "pl_aberto_usd": round(pl_aberto, 4),
                 "pl_realizado_usd": round(realizado, 4),
                 "posicoes": [dict(p) for p in self.posicoes],
