@@ -318,6 +318,15 @@ Depois abre no browser do telemóvel: **http://localhost:5000** e carrega em
 
 ## Ativar modo REAL (duas travas)
 
+**Antes de mudar qualquer coisa**, corre o checklist de prontidão (só verifica,
+não ativa nada):
+```bash
+python verificar_pronto_real.py
+```
+Confirma que a wallet, a RPC, a Jupiter e o preço do SOL estão todos a
+responder, e relembra os cuidados de segurança (wallet nunca exposta, não
+correr dois bots reais na mesma wallet, `MAX_TRADE_USD` baixo para começar).
+
 Por segurança são precisas **duas** confirmações no `.env`:
 
 ```env
