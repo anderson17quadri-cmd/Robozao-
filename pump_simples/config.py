@@ -166,7 +166,10 @@ class Config:
 
     # Endpoints (deixados como config para facilitar testes)
     gecko_api_base: str = "https://api.geckoterminal.com/api/v2"
-    jupiter_api_base: str = "https://quote-api.jup.ag/v6"
+    # quote-api.jup.ag/v6 foi descontinuado pela Jupiter — substituído pelo
+    # tier gratuito lite-api.jup.ag (mesma API, endpoints /quote e /swap,
+    # sem precisar de API key).
+    jupiter_api_base: str = "https://lite-api.jup.ag/swap/v1"
     pumpfun_api_base: str = "https://frontend-api.pump.fun"
     bitquery_api_url: str = "https://streaming.bitquery.io/eap"
 
