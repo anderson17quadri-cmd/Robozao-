@@ -94,14 +94,16 @@ Além de mostrar saldo/posições/histórico, o dashboard permite:
   sem trades) mostrando a variação **desde a venda**. Segue os últimos
   `ACOMPANHAR_VENDIDOS_MAX` (default 20), a cada
   `INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS` (default 60s). Não afeta saldo.
-- **Botão 🧪 SIMULADO / ⚠️ REAL** — alterna entre DRY_RUN e modo real sem
-  editar o `.env` nem reiniciar. Só funciona depois de `PERMITIR_ENVIO_REAL=true`
-  estar no `.env` (essa trava continua só lá — o botão não a liga sozinho);
-  exige o bot parado e sem posições abertas, e pede confirmação explícita ao
-  ligar o real. Cada reinício do processo volta sempre a `DRY_RUN` do `.env`
-  (fail-closed — nunca arranca em real sozinho). Com o modo real ligado,
-  aparece um KPI extra **"saldo wallet (real)"** com o saldo on-chain (SOL)
-  da tua carteira, lido diretamente da RPC.
+- **Botão 🧪 DEMO / ⚠️ REAL** — alterna entre modo simulado e real sem editar
+  o `.env` nem reiniciar. Ligar o real exige: **wallet configurada** (sem chave
+  válida não dá para assinar nada), **bot parado**, **sem posições abertas**
+  (para não misturar posições simuladas com execução real) e **confirmação
+  explícita** no popup. Cada reinício do processo volta sempre ao modo de
+  arranque do `.env` (fail-closed — só arranca em real se `DRY_RUN=false` E
+  `PERMITIR_ENVIO_REAL=true`; caso contrário arranca em DEMO e nunca fica em
+  real sozinho depois de um restart). Com o modo real ligado, aparece um KPI
+  extra **"saldo wallet (real)"** com o saldo on-chain (SOL) da tua carteira,
+  lido diretamente da RPC.
 
 ## Moeda
 
@@ -329,7 +331,7 @@ Depois abre no browser do telemóvel: **http://localhost:5000** e carrega em
 
 ---
 
-## Ativar modo REAL (duas travas)
+## Ativar modo REAL
 
 **Antes de mudar qualquer coisa**, corre o checklist de prontidão (só verifica,
 não ativa nada):
@@ -339,25 +341,22 @@ python verificar_pronto_real.py
 Confirma que a wallet, a RPC, a Jupiter e o preço do SOL estão todos a
 responder, e relembra os cuidados de segurança (wallet nunca exposta, não
 correr dois bots reais na mesma wallet, `MAX_TRADE_USD` baixo para começar).
+Instala também `base58` (`pip install base58`) — a assinatura em si é feita
+em Python puro, sem compilação nenhuma.
 
-Por segurança há **duas travas** antes de alguma transação real acontecer:
+Depois é simples: no dashboard, carrega no botão **🧪 DEMO** — ele passa a
+**⚠️ REAL** e pede uma confirmação no popup a avisar que a partir daí gastas
+SOL a sério. Não precisas de editar o `.env` para isto.
 
-```env
-PERMITIR_ENVIO_REAL=true
-```
-Esta é a única que precisas de editar no `.env` — deliberadamente, uma vez,
-quando tiveres a certeza. Instala também `base58` (`pip install base58`) —
-a assinatura em si é feita em Python puro, sem compilação nenhuma.
-
-A segunda trava (o antigo `DRY_RUN`) já não precisa de edição manual: com
-`PERMITIR_ENVIO_REAL=true` ativo, aparece um botão **🧪 SIMULADO / ⚠️ REAL**
-no dashboard para alternar entre simulado e real quando quiseres, sem editar
-o `.env` nem reiniciar. Esse botão exige o bot parado, sem posições abertas
-(para não misturar posições simuladas com execução real), e pede
-**confirmação explícita no popup** antes de armar o real. Cada reinício do
-processo volta sempre a `DRY_RUN` do `.env` (fail-closed) — o bot nunca
-arranca em real sozinho, tens sempre de voltar a carregar no botão depois de
-reiniciar.
+Proteções que continuam sempre a valer:
+- O botão só liga o real com **wallet configurada**, **bot parado** e **sem
+  posições abertas**, e sempre com **confirmação explícita**.
+- Cada reinício do bot volta sempre a **DEMO** (fail-closed) — a menos que
+  ponhas `DRY_RUN=false` E `PERMITIR_ENVIO_REAL=true` no `.env`, o que só faz
+  o bot *arrancar* já em real (útil para correr sem supervisão). Sem isso, o
+  bot nunca fica em real sozinho depois de um restart: tens de voltar a
+  carregar no botão.
+- Mesmo em real, cada **venda manual** ainda pede confirmação reforçada.
 
 ---
 

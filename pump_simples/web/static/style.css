@@ -76,8 +76,11 @@ body{
   border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
 .btn-hype.on{color:#1a1205;background:linear-gradient(180deg,#ffc24d,#ffb020);border-color:transparent}
 .btn-mode{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
-  border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
-.btn-mode.on{color:#fff;background:linear-gradient(180deg,#ff5f6f,#ec3346);border-color:transparent}
+  border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:800;font-size:12px;
+  min-width:98px;text-align:center;transition:background .12s,color .12s,border-color .12s}
+.btn-mode.off{color:var(--accent-2);border-color:rgba(94,234,212,.4)}
+.btn-mode.on{color:#fff;background:linear-gradient(180deg,#ff5f6f,#ec3346);
+  border-color:transparent;animation:pulse 1.6s infinite}
 .hidden{display:none !important}
 .tag-hype{font-size:9px;font-weight:800;letter-spacing:.5px;color:#1a1205;
   background:var(--amber);border-radius:5px;padding:1px 6px;vertical-align:middle}

@@ -97,42 +97,44 @@ def api_state():
 
 @app.route("/api/modo", methods=["POST"])
 def api_modo():
-    """Alterna SIMULADO <-> REAL em runtime (sem editar o .env nem reiniciar).
+    """Alterna DEMO <-> REAL em runtime (sem editar o .env nem reiniciar).
 
-    PERMITIR_ENVIO_REAL continua só no .env — essa trava tens de a ligar tu
-    mesmo, deliberadamente, fora do dashboard. Este botão só alterna o outro
-    lado (o antigo DRY_RUN) e exige: bot parado, sem posições abertas
-    (para não misturar posições simuladas com execução real), e confirmação
-    explícita ao ligar o real.
+    Proteções ao LIGAR o real: wallet configurada (sem chave válida não dá
+    para assinar nada), bot parado e sem posições abertas (para não misturar
+    posições simuladas com execução real), e confirmação explícita no popup.
+    Um reinício do bot volta sempre a DEMO (fail-closed) a menos que o .env
+    diga o contrário — nunca fica em real sozinho depois de um restart.
     """
     body = request.get_json(silent=True) or {}
     quer_real = bool(body.get("real", False))
     confirmado = bool(body.get("confirmar_real", False))
 
-    if quer_real and not CFG.permitir_envio_real:
-        return jsonify({
-            "ok": False,
-            "motivo": "PERMITIR_ENVIO_REAL=false no .env — ativa isso primeiro, "
-                      "deliberadamente, no ficheiro .env antes de poderes ligar "
-                      "o modo real por aqui.",
-        }), 400
     if CONTROLLER.is_running():
-        return jsonify({"ok": False, "motivo": "para o bot antes de mudar de modo"}), 409
+        return jsonify({"ok": False, "motivo": "Para o bot antes de mudar de modo."}), 409
     if STATE.posicoes:
         return jsonify({
             "ok": False,
-            "motivo": "fecha ou vende todas as posições abertas antes de mudar de modo "
-                      "(evita misturar posições simuladas com execução real)",
+            "motivo": "Fecha ou vende todas as posições abertas antes de mudar de modo "
+                      "(evita misturar posições simuladas com execução real).",
         }), 409
-    if quer_real and not confirmado:
-        return jsonify({
-            "ok": False,
-            "precisa_confirmacao": True,
-            "aviso": "MODO REAL — a partir de agora comprar/vender gasta SOL a "
-                     "sério da tua wallet. Confirma para continuar.",
-        }), 409
+    if quer_real:
+        if not get_public_key():
+            return jsonify({
+                "ok": False,
+                "motivo": "Wallet não configurada — sem WALLET_PRIVATE_KEY válida no .env "
+                          "não dá para operar em real. Corre 'python verificar_pronto_real.py' "
+                          "para confirmar que está tudo pronto.",
+            }), 400
+        if not confirmado:
+            return jsonify({
+                "ok": False,
+                "precisa_confirmacao": True,
+                "aviso": "A partir de agora, cada compra/venda vai gastar SOL a SÉRIO da "
+                         "tua wallet. O bot arranca sempre em DEMO — este botão é a única "
+                         "coisa que liga o real. Confirmas?",
+            }), 409
 
-    config.set_dry_run_runtime(not quer_real)
+    config.set_envio_real_runtime(quer_real)
     return jsonify({"ok": True, "envio_real_armado": CFG.envio_real_armado})
 
 

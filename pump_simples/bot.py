@@ -53,7 +53,7 @@ class BotController:
         log_event(CFG.log_file, "bot_start", modo=modo,
                   fonte_deteccao=CFG.fonte_deteccao,
                   wallet=wallet_status(), pubkey=get_public_key(),
-                  dry_run=CFG.dry_run, envio_real=CFG.envio_real_armado)
+                  dry_run=CFG.dry_run_atual, envio_real=CFG.envio_real_armado)
 
         ultimo_scan = 0.0
         ultimo_acompanhamento = 0.0

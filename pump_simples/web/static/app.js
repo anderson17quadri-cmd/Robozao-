@@ -187,13 +187,13 @@
     if (badge) {
       badge.classList.toggle("badge-real", real);
       badge.classList.toggle("badge-dry", !real);
-      badge.textContent = real ? "● MODO REAL" : "● DRY_RUN · simulado";
+      badge.textContent = real ? "🔴 modo REAL" : "🧪 modo DEMO";
     }
     const mb = $("modeBtn");
     if (mb) {
       mb.classList.toggle("on", real);
       mb.classList.toggle("off", !real);
-      mb.textContent = real ? "⚠️ REAL" : "🧪 SIMULADO";
+      mb.textContent = real ? "⚠️ REAL" : "🧪 DEMO";
     }
 
     // saldo real da wallet (só aparece quando o modo real está armado)
@@ -364,6 +364,17 @@
     $("modalTitle").textContent = titulo;
     $("modalMsg").textContent = msg;
     $("modalWarn").style.display = mostrarWarn ? "block" : "none";
+    // fn === null => é só um aviso (sem ação): esconde o "confirmar" e o
+    // "cancelar" passa a "ok". Evita botões que parecem fazer algo e não fazem.
+    const okBtn = $("modalOk");
+    const cancelBtn = $("modalCancel");
+    if (fn) {
+      okBtn.style.display = "";
+      cancelBtn.textContent = "cancelar";
+    } else {
+      okBtn.style.display = "none";
+      cancelBtn.textContent = "ok";
+    }
     pendingConfirm = fn;
     $("modal").classList.remove("hidden");
   }

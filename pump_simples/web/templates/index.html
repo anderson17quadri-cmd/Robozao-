@@ -19,12 +19,12 @@
     </div>
 
     <div class="mode-block">
-      <span class="badge badge-dry" id="modeBadge" title="Transações reais on-chain">● DRY_RUN · simulado</span>
+      <span class="badge badge-dry" id="modeBadge" title="Modo atual do bot">🧪 modo DEMO</span>
       <span class="wallet">wallet: {{ modo.wallet }}{% if modo.pubkey %} · {{ modo.pubkey[:4] }}…{{ modo.pubkey[-4:] }}{% endif %}</span>
     </div>
 
     <div class="topbar-btns">
-      <button id="modeBtn" class="btn-mode off" title="Alterna entre SIMULADO (DRY_RUN) e REAL. Exige PERMITIR_ENVIO_REAL=true no .env, bot parado e sem posições abertas.">🧪 SIMULADO</button>
+      <button id="modeBtn" class="btn-mode off" title="Alterna entre DEMO (simulado) e REAL (gasta SOL a sério). Ligar o real exige wallet configurada, bot parado, sem posições abertas e confirmação.">🧪 DEMO</button>
       <button id="hypeBtn" class="btn-hype off" title="Canal HYPE: compra também tokens com tração real (compradores/volume) que saltam o filtro de market cap. Só DRY_RUN recomendado.">🔥 HYPE: off</button>
       <button id="resetBtn" class="btn-reset" title="Repõe o saldo inicial e limpa posições (só DRY_RUN)">↺ Reiniciar</button>
       <button id="toggleBtn" class="toggle off">
