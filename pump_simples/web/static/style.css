@@ -75,6 +75,10 @@ body{
 .btn-hype{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
   border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
 .btn-hype.on{color:#1a1205;background:linear-gradient(180deg,#ffc24d,#ffb020);border-color:transparent}
+.btn-mode{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+  border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:700;font-size:12px}
+.btn-mode.on{color:#fff;background:linear-gradient(180deg,#ff5f6f,#ec3346);border-color:transparent}
+.hidden{display:none !important}
 .tag-hype{font-size:9px;font-weight:800;letter-spacing:.5px;color:#1a1205;
   background:var(--amber);border-radius:5px;padding:1px 6px;vertical-align:middle}
 .btn-reset{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
@@ -95,6 +99,8 @@ body{
 }
 .kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
 .kpi-val{font-family:var(--mono);font-size:26px;font-weight:700}
+.kpi-real{border-color:rgba(255,77,94,.5)}
+.kpi-real .kpi-val{color:var(--down)}
 
 .statusline{
   color:var(--muted);font-size:12px;font-family:var(--mono);margin:0

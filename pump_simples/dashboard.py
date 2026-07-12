@@ -9,10 +9,14 @@ Dashboard web do robozão (Flask).
 Corre o bot na MESMA processo, numa thread de fundo (BotController).
 """
 
+import time
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
 
+import config
+import gecko
+import solana_rpc
 from bot import CONTROLLER
 from config import CFG
 from state import STATE
@@ -25,11 +29,32 @@ app = Flask(
     static_folder=str(BASE / "web" / "static"),
 )
 
+# saldo REAL da wallet (on-chain) — cache simples para não martelar a RPC
+# a cada poll de 2.5s do dashboard (o rate limit da RPC é partilhado com o
+# resto do bot).
+_SALDO_REAL_TTL_SEGUNDOS = 20
+_saldo_real_cache = {"sol": None, "usd": None, "atualizado_em": 0.0}
+
+
+def _saldo_real_wallet() -> dict:
+    if not CFG.envio_real_armado:
+        return {"sol": None, "usd": None}
+    agora = time.time()
+    if agora - _saldo_real_cache["atualizado_em"] < _SALDO_REAL_TTL_SEGUNDOS:
+        return {"sol": _saldo_real_cache["sol"], "usd": _saldo_real_cache["usd"]}
+    pubkey = get_public_key()
+    sol = solana_rpc.get_sol_balance(pubkey) if pubkey else None
+    preco = gecko.get_sol_price_usd() if sol is not None else None
+    usd = (sol * preco) if (sol is not None and preco) else None
+    _saldo_real_cache.update({"sol": sol, "usd": usd, "atualizado_em": agora})
+    return {"sol": sol, "usd": usd}
+
 
 def _modo_info() -> dict:
     return {
-        "dry_run": CFG.dry_run,
+        "dry_run": CFG.dry_run_atual,
         "envio_real_armado": CFG.envio_real_armado,
+        "permitir_envio_real": CFG.permitir_envio_real,
         "modo_label": "REAL" if CFG.envio_real_armado else "DRY_RUN",
         "fonte_deteccao": CFG.fonte_deteccao,
         "moeda_simbolo": CFG.moeda_simbolo,
@@ -64,7 +89,51 @@ def api_state():
     snap = STATE.snapshot()
     snap["bot_running"] = CONTROLLER.is_running()
     snap["modo"] = _modo_info()
+    saldo_real = _saldo_real_wallet()
+    snap["saldo_real_sol"] = saldo_real["sol"]
+    snap["saldo_real_usd"] = saldo_real["usd"]
     return jsonify(snap)
+
+
+@app.route("/api/modo", methods=["POST"])
+def api_modo():
+    """Alterna SIMULADO <-> REAL em runtime (sem editar o .env nem reiniciar).
+
+    PERMITIR_ENVIO_REAL continua só no .env — essa trava tens de a ligar tu
+    mesmo, deliberadamente, fora do dashboard. Este botão só alterna o outro
+    lado (o antigo DRY_RUN) e exige: bot parado, sem posições abertas
+    (para não misturar posições simuladas com execução real), e confirmação
+    explícita ao ligar o real.
+    """
+    body = request.get_json(silent=True) or {}
+    quer_real = bool(body.get("real", False))
+    confirmado = bool(body.get("confirmar_real", False))
+
+    if quer_real and not CFG.permitir_envio_real:
+        return jsonify({
+            "ok": False,
+            "motivo": "PERMITIR_ENVIO_REAL=false no .env — ativa isso primeiro, "
+                      "deliberadamente, no ficheiro .env antes de poderes ligar "
+                      "o modo real por aqui.",
+        }), 400
+    if CONTROLLER.is_running():
+        return jsonify({"ok": False, "motivo": "para o bot antes de mudar de modo"}), 409
+    if STATE.posicoes:
+        return jsonify({
+            "ok": False,
+            "motivo": "fecha ou vende todas as posições abertas antes de mudar de modo "
+                      "(evita misturar posições simuladas com execução real)",
+        }), 409
+    if quer_real and not confirmado:
+        return jsonify({
+            "ok": False,
+            "precisa_confirmacao": True,
+            "aviso": "MODO REAL — a partir de agora comprar/vender gasta SOL a "
+                     "sério da tua wallet. Confirma para continuar.",
+        }), 409
+
+    config.set_dry_run_runtime(not quer_real)
+    return jsonify({"ok": True, "envio_real_armado": CFG.envio_real_armado})
 
 
 @app.route("/api/toggle", methods=["POST"])

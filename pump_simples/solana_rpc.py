@@ -166,3 +166,18 @@ def get_top_holder_concentration(mint: str) -> dict:
         "motivo": "ok",
     })
     return resultado
+
+
+def get_sol_balance(pubkey: str) -> float | None:
+    """Saldo em SOL da wallet (getBalance). None se falhar (RPC em baixo,
+    pubkey inválida, etc.) — nunca finge um valor."""
+    if not pubkey:
+        return None
+    data, _motivo = _rpc_call("getBalance", [pubkey])
+    if not data or "result" not in data:
+        return None
+    try:
+        lamports = data["result"]["value"]
+        return lamports / 1_000_000_000
+    except (KeyError, TypeError):
+        return None

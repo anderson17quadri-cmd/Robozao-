@@ -94,6 +94,14 @@ Além de mostrar saldo/posições/histórico, o dashboard permite:
   sem trades) mostrando a variação **desde a venda**. Segue os últimos
   `ACOMPANHAR_VENDIDOS_MAX` (default 20), a cada
   `INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS` (default 60s). Não afeta saldo.
+- **Botão 🧪 SIMULADO / ⚠️ REAL** — alterna entre DRY_RUN e modo real sem
+  editar o `.env` nem reiniciar. Só funciona depois de `PERMITIR_ENVIO_REAL=true`
+  estar no `.env` (essa trava continua só lá — o botão não a liga sozinho);
+  exige o bot parado e sem posições abertas, e pede confirmação explícita ao
+  ligar o real. Cada reinício do processo volta sempre a `DRY_RUN` do `.env`
+  (fail-closed — nunca arranca em real sozinho). Com o modo real ligado,
+  aparece um KPI extra **"saldo wallet (real)"** com o saldo on-chain (SOL)
+  da tua carteira, lido diretamente da RPC.
 
 ## Moeda
 
@@ -332,17 +340,24 @@ Confirma que a wallet, a RPC, a Jupiter e o preço do SOL estão todos a
 responder, e relembra os cuidados de segurança (wallet nunca exposta, não
 correr dois bots reais na mesma wallet, `MAX_TRADE_USD` baixo para começar).
 
-Por segurança são precisas **duas** confirmações no `.env`:
+Por segurança há **duas travas** antes de alguma transação real acontecer:
 
 ```env
-DRY_RUN=false
 PERMITIR_ENVIO_REAL=true
 ```
+Esta é a única que precisas de editar no `.env` — deliberadamente, uma vez,
+quando tiveres a certeza. Instala também `base58` (`pip install base58`) —
+a assinatura em si é feita em Python puro, sem compilação nenhuma.
 
-Só quando **ambas** estão assim é que alguma transação real acontece. E mesmo
-assim, no dashboard ainda tens de **confirmar no popup** antes de o bot arrancar
-em real. Instala também `base58` (`pip install base58`) — a assinatura em si
-é feita em Python puro, sem compilação nenhuma.
+A segunda trava (o antigo `DRY_RUN`) já não precisa de edição manual: com
+`PERMITIR_ENVIO_REAL=true` ativo, aparece um botão **🧪 SIMULADO / ⚠️ REAL**
+no dashboard para alternar entre simulado e real quando quiseres, sem editar
+o `.env` nem reiniciar. Esse botão exige o bot parado, sem posições abertas
+(para não misturar posições simuladas com execução real), e pede
+**confirmação explícita no popup** antes de armar o real. Cada reinício do
+processo volta sempre a `DRY_RUN` do `.env` (fail-closed) — o bot nunca
+arranca em real sozinho, tens sempre de voltar a carregar no botão depois de
+reiniciar.
 
 ---
 

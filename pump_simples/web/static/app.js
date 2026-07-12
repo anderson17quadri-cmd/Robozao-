@@ -4,8 +4,12 @@
 
   const $ = (id) => document.getElementById(id);
   const MODO = window.MODO || {};
-  const REAL = !!MODO.envio_real_armado;
   const SIM = MODO.moeda_simbolo || "€";   // símbolo da carteira (saldo/P&L)
+
+  // modo atual (simulado/real) — atualizado a cada poll via state.modo, porque
+  // agora pode mudar em runtime (botão) sem recarregar a página.
+  let modoAtual = Object.assign({}, MODO);
+  function isReal() { return !!modoAtual.envio_real_armado; }
 
   // ---------- formatação ----------
   // valores da CARTEIRA (saldo, P/L, valor investido) — na moeda simulada
@@ -175,6 +179,37 @@
   }
 
   function render(state) {
+    if (state.modo) modoAtual = state.modo;
+
+    // badge de modo + botão (atualizam ao vivo, já não só no carregamento da página)
+    const badge = $("modeBadge");
+    const real = isReal();
+    if (badge) {
+      badge.classList.toggle("badge-real", real);
+      badge.classList.toggle("badge-dry", !real);
+      badge.textContent = real ? "● MODO REAL" : "● DRY_RUN · simulado";
+    }
+    const mb = $("modeBtn");
+    if (mb) {
+      mb.classList.toggle("on", real);
+      mb.classList.toggle("off", !real);
+      mb.textContent = real ? "⚠️ REAL" : "🧪 SIMULADO";
+    }
+
+    // saldo real da wallet (só aparece quando o modo real está armado)
+    const kpiWalletCard = $("kpiWalletCard");
+    if (kpiWalletCard) {
+      kpiWalletCard.classList.toggle("hidden", !real);
+      if (real) {
+        const sol = state.saldo_real_sol;
+        const usd = state.saldo_real_usd;
+        const txt = (sol === null || sol === undefined)
+          ? "—"
+          : `${Number(sol).toFixed(4)} SOL` + (usd !== null && usd !== undefined ? ` (~$${Number(usd).toFixed(2)})` : "");
+        $("kpiWalletSaldo").textContent = txt;
+      }
+    }
+
     $("kpiSaldo").textContent = fmtUsd(state.saldo_usd);
     $("kpiTotal").textContent = fmtUsd(state.valor_total_usd);
     const plA = $("kpiPlAberto");
@@ -276,19 +311,41 @@
   }
 
   async function venderPosicao(id, nome) {
-    const titulo = REAL ? "⚠️ Vender em MODO REAL" : "Confirmar venda";
+    const real = isReal();
+    const titulo = real ? "⚠️ Vender em MODO REAL" : "Confirmar venda";
     const msg = `Vender 100% de "${nome}" agora?` +
-      (REAL ? " Isto envia uma transação real." : " (simulado, DRY_RUN)");
-    showConfirm(titulo, msg, REAL, async () => {
+      (real ? " Isto envia uma transação real." : " (simulado, DRY_RUN)");
+    showConfirm(titulo, msg, real, async () => {
       try {
         const r = await fetch(`/api/posicao/${id}/vender`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmar_real: REAL }),
+          body: JSON.stringify({ confirmar_real: real }),
         });
         await r.json().catch(() => ({}));
         await poll();
       } catch (e) { /* ignora */ }
     });
+  }
+
+  // ---------- alternar SIMULADO <-> REAL ----------
+  async function toggleModo(confirmado) {
+    const querReal = !isReal();   // direção fixa entre a 1ª chamada e a confirmação
+    try {
+      const r = await fetch("/api/modo", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ real: querReal, confirmar_real: !!confirmado }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 409 && d.precisa_confirmacao) {
+        showConfirm("⚠️ Ligar MODO REAL", d.aviso, true, () => toggleModo(true));
+        return;
+      }
+      if (!r.ok) {
+        showConfirm("Não foi possível mudar de modo", d.motivo || "erro desconhecido", false, null);
+        return;
+      }
+      await poll();
+    } catch (e) { /* ignora */ }
   }
 
   async function salvarMeta(id, valor) {
@@ -352,6 +409,7 @@
 
   // ---------- eventos ----------
   $("toggleBtn").addEventListener("click", () => toggle(false));
+  $("modeBtn").addEventListener("click", () => toggleModo(false));
   $("resetBtn").addEventListener("click", reiniciar);
   $("hypeBtn").addEventListener("click", toggleHype);
   $("tradeSave").addEventListener("click", salvarValorEntrada);

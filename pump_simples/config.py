@@ -179,8 +179,17 @@ class Config:
 
     @property
     def envio_real_armado(self) -> bool:
-        """Só True quando as DUAS travas de segurança estão desligadas."""
-        return (not self.dry_run) and self.permitir_envio_real
+        """Só True quando as DUAS travas de segurança estão desligadas: o
+        toggle de runtime (dashboard — começa sempre em simulado a cada
+        arranque) E o PERMITIR_ENVIO_REAL do .env (essa continua a ter de
+        ser ativada manualmente por ti, com calma, fora do dashboard)."""
+        return (not get_dry_run_runtime()) and self.permitir_envio_real
+
+    @property
+    def dry_run_atual(self) -> bool:
+        """Estado atual (pode ter sido alternado no dashboard) — usa isto
+        para mostrar o modo em vez de `dry_run`, que é só o valor inicial do .env."""
+        return get_dry_run_runtime()
 
 
 _FONTES_VALIDAS = ("gecko", "pumpfun_nao_oficial", "bitquery")
@@ -242,3 +251,20 @@ def load_config() -> Config:
 
 # instância única partilhada por toda a app
 CFG = load_config()
+
+# --- Alternância de modo em runtime (via botão no dashboard) ---
+# Começa sempre igual ao DRY_RUN do .env — arranque sempre seguro. O
+# dashboard pode alternar isto sem editar o .env nem reiniciar o processo;
+# NUNCA persiste entre reinícios (cada arranque volta ao valor do .env,
+# fail-closed). PERMITIR_ENVIO_REAL continua só no .env — essa trava o
+# botão não consegue ligar sozinho.
+_dry_run_runtime = CFG.dry_run
+
+
+def set_dry_run_runtime(valor: bool) -> None:
+    global _dry_run_runtime
+    _dry_run_runtime = bool(valor)
+
+
+def get_dry_run_runtime() -> bool:
+    return _dry_run_runtime
