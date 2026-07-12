@@ -147,6 +147,11 @@ class Config:
     blacklist_prejuizo_pct: float = 50.0
     blacklist_cooldown_horas: float = 0.0   # 0 = bloqueio permanente
 
+    # --- Notificações Telegram (resumo periódico, pensado p/ correr sem supervisão) ---
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    resumo_intervalo_minutos: float = 60.0   # 0 = desligado
+
     # --- Dashboard ---
     dashboard_host: str = "0.0.0.0"
     dashboard_port: int = 5000
@@ -220,6 +225,9 @@ def load_config() -> Config:
         liquidez_queda_venda_pct=_get_float("LIQUIDEZ_QUEDA_VENDA_PCT", 70.0),
         blacklist_prejuizo_pct=_get_float("BLACKLIST_PREJUIZO_PCT", 50.0),
         blacklist_cooldown_horas=_get_float("BLACKLIST_COOLDOWN_HORAS", 0.0),
+        telegram_bot_token=_get("TELEGRAM_BOT_TOKEN", ""),
+        telegram_chat_id=_get("TELEGRAM_CHAT_ID", ""),
+        resumo_intervalo_minutos=_get_float("RESUMO_INTERVALO_MINUTOS", 60.0),
         dashboard_host=_get("DASHBOARD_HOST", "0.0.0.0"),
         dashboard_port=_get_int("DASHBOARD_PORT", 5000),
     )

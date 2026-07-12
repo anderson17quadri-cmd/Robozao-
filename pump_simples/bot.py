@@ -57,6 +57,7 @@ class BotController:
 
         ultimo_scan = 0.0
         ultimo_acompanhamento = 0.0
+        ultimo_resumo = 0.0
         while not self._stop.is_set():
             agora = time.time()
             try:
@@ -88,6 +89,13 @@ class BotController:
                 # 4) reavalia a lista de vigia — tokens que podem ter crescido
                 # até passar a liquidez/mcap desde que saíram do feed new_pools
                 trader.revisar_lista_vigia()
+
+                # 5) resumo periódico por Telegram (pensado p/ correr sem supervisão)
+                if (CFG.resumo_intervalo_minutos > 0
+                        and agora - ultimo_resumo >= CFG.resumo_intervalo_minutos * 60):
+                    ultimo_resumo = agora
+                    import resumo
+                    resumo.enviar_resumo()
             except Exception as exc:
                 # rede de segurança final — o loop NUNCA morre
                 log_event(CFG.log_file, "erro_loop", erro=str(exc),

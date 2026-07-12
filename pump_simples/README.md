@@ -162,6 +162,33 @@ antes até de entrar na lista de vigia.
   é uma simulação nova, do zero).
 - Motivo no log de rejeição: `mint_bloqueado`.
 
+### Resumo por Telegram (correr sem supervisão)
+
+Pensado para deixares o bot a correr (ex: durante a noite) e receberes um
+resumo curto no telemóvel sem teres de abrir o dashboard.
+
+**Configurar (1 minuto):**
+```bash
+# 1. No Telegram: fala com @BotFather -> /newbot -> segue os passos -> copia o TOKEN
+# 2. Manda uma mensagem qualquer ao TEU bot novo (ex: "oi")
+# 3. Corre:
+python telegram_setup.py <TOKEN>
+# -> dá-te o CHAT_ID. Cola os dois no .env:
+#    TELEGRAM_BOT_TOKEN=...
+#    TELEGRAM_CHAT_ID=...
+```
+
+Com isto configurado, o bot envia um resumo automático a cada
+`RESUMO_INTERVALO_MINUTOS` (default 60min; `0` = desligado) — saldo, trades
+fechados, win rate, P/L, posições abertas com P/L de cada uma, rugs bloqueados
+e colapsos de liquidez detetados.
+
+Também podes pedir o resumo manualmente a qualquer momento:
+```bash
+python resumo.py
+```
+Se o Telegram não estiver configurado, imprime na mesma no terminal.
+
 ### Canal HYPE (opcional)
 
 Botão **🔥 HYPE** no dashboard (default desligado). Quando ligado, tokens com
