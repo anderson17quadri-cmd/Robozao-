@@ -388,6 +388,7 @@ Proteções que continuam sempre a valer:
 | `solana_rpc.py` | Check de autoridades do mint (fail-closed, rate-limited) |
 | `rugcheck.py` | Análise de contrato via RugCheck.xyz (score/insiders/LP) |
 | `analisar_contratos.py` | Compara rugs vs vencedores no RugCheck (mede se ajuda) |
+| `padroes_rugs.py` | Padrões dos rugs: o que dá p/ saber antes de comprar vs saída |
 | `ratelimit.py` | Rate limiter (N pedidos/seg) — evita rate limit do RPC |
 | `wallet.py` | Carrega a wallet (nunca loga a chave) |
 | `jupiter.py` | Swaps reais (quote + swap) — só modo real |
