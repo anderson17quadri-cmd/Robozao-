@@ -61,6 +61,7 @@ def _carregar_trades() -> list[dict]:
         trades.append({
             "name": v.get("name"),
             "pl_pct": v.get("pl_pct") or 0.0,
+            "pl_usd": v.get("pl_usd") or 0.0,
             "motivo": v.get("motivo"),
             "liquidez": c.get("liquidez_usd"),
             "entry_price": entry,
@@ -82,6 +83,13 @@ def _e_rug(t: dict) -> bool:
 def _med(vals):
     v = [x for x in vals if x is not None]
     return statistics.median(v) if v else None
+
+
+def _eur(v) -> str:
+    try:
+        return ("+" if v >= 0 else "-") + "€" + f"{abs(v):.2f}"
+    except Exception:
+        return "?"
 
 
 def _fmt(v, tipo=""):
@@ -166,14 +174,37 @@ def main():
     if any(t.get("dex") for t in trades):
         _cmp_cat("por DEX (curva pump-fun vs graduado)", rugs, naos, "dex")
 
+    # ---- C) teto de market cap (se o mcap separa, onde pôr o corte?) ----
+    com_mcap = [t for t in trades if t.get("mcap")]
+    if com_mcap:
+        print("\n" + "-" * 68)
+        print("C) TETO DE MARKET CAP — e se NÃO comprasses acima de X?")
+        print("   (o mcap foi o que mais separou rugs de não-rugs — testa o corte)")
+        print(f"   {'teto mcap':>12} {'trades':>7} {'win%':>6} {'P/L soma':>12} {'% rugs':>7}")
+        total_pl = sum(t["pl_usd"] for t in com_mcap)
+        print(f"   {'sem teto':>12} {len(com_mcap):>7} "
+              f"{sum(1 for t in com_mcap if t['pl_usd']>0)/len(com_mcap)*100:>5.0f}% "
+              f"{_eur(total_pl):>12} "
+              f"{sum(1 for t in com_mcap if _e_rug(t))/len(com_mcap)*100:>6.0f}%")
+        for teto in (25000, 30000, 35000, 40000, 50000, 75000):
+            g = [t for t in com_mcap if t["mcap"] <= teto]
+            if not g:
+                continue
+            win = sum(1 for t in g if t["pl_usd"] > 0) / len(g) * 100
+            soma = sum(t["pl_usd"] for t in g)
+            pct_rug = sum(1 for t in g if _e_rug(t)) / len(g) * 100
+            print(f"   {('≤ $'+format(teto, ',')):>12} {len(g):>7} {win:>5.0f}% "
+                  f"{_eur(soma):>12} {pct_rug:>6.0f}%")
+
     print("\n" + "=" * 68)
     print(" COMO DECIDIR")
     print("=" * 68)
     print("   - Linhas com '<<< SEPARA' ou '<<< mais nos rugs' = padrão que dá")
     print("     para usar como filtro à entrada (rugs claramente diferentes).")
+    print("   - Secção C: escolhe o teto onde o P/L soma é melhor SEM perder trades")
+    print("     de mais (se cortar demais, ficas sem os grandes vencedores também).")
     print("   - Se nada separar, os rugs são indistinguíveis à compra — a defesa")
-    print("     é a SAÍDA (secção A: se morrem muito depressa, saída mais rápida")
-    print("     nos primeiros minutos ajuda) e cortar canais/origens que perdem.")
+    print("     é a SAÍDA e cortar canais/origens que perdem.")
     print("=" * 68)
 
 
