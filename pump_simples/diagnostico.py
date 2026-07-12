@@ -7,6 +7,7 @@ Lê o log de decisões (decisions.jsonl) e o estado (state.json) e imprime:
   3. Posições fechadas por motivo (take_profit / stop_loss / timeout / manual) + P/L.
   4. Win rate e P/L médio.
   5. Fonte(s) de deteção usadas e a sua eficácia.
+  6-10. Padrões (liquidez, hype, canal hype vs normal, origem scan vs vigia).
 
 Uso:
     python diagnostico.py                # usa decisions.jsonl e state.json locais
@@ -235,6 +236,9 @@ def main():
     # ---------- 9) DESEMPENHO POR HYPE (compradores/volume à compra) ----------
     _analise_por_hype(compras, vendas)
 
+    # ---------- 10) DESEMPENHO POR CANAL (hype vs normal) e ORIGEM (scan vs vigia) ----------
+    _analise_por_canal(compras, vendas)
+
     print("\n" + "=" * 62)
 
 
@@ -287,6 +291,75 @@ def _analise_por_hype(compras: list[dict], vendas: list[dict]):
     _faixas_desempenho(trades, "volume_h1", [
         (0, 1000, "< $1k"), (1000, 5000, "$1k–5k"), (5000, 20000, "$5k–20k"),
         (20000, 100000, "$20k–100k"), (100000, float("inf"), "$100k+")])
+
+
+def _grupo_stats(grupo):
+    """(n, win%, soma P/L, mediana P/L%) de uma lista de trades {pl_usd, pl_pct}."""
+    n = len(grupo)
+    wins = sum(1 for t in grupo if t["pl_usd"] > 0)
+    soma = sum(t["pl_usd"] for t in grupo)
+    medpct = _mediana([t["pl_pct"] for t in grupo]) or 0.0
+    return n, (wins / n * 100 if n else 0.0), soma, medpct
+
+
+def _analise_por_canal(compras: list[dict], vendas: list[dict]):
+    """
+    O canal HYPE compensa? E as compras da lista de vigia (origem=vigia) vs as
+    do scan normal? Responde direto a 'vale a pena manter o HYPE ligado?'.
+
+    Junta compra<->venda pelo pos_id (o canal/origem só existem na compra).
+    """
+    print("\n" + "-" * 62)
+    print("10) DESEMPENHO POR CANAL (hype vs normal) e ORIGEM (scan vs vigia)")
+
+    compra_por_id = {c.get("pos_id"): c for c in compras if c.get("pos_id")}
+    trades = []
+    for v in vendas:
+        c = compra_por_id.get(v.get("pos_id"))
+        if not c:
+            continue
+        trades.append({
+            "canal": c.get("canal") or "normal",
+            "origem": c.get("origem") or "scan",
+            "pl_usd": v.get("pl_usd") or 0.0,
+            "pl_pct": v.get("pl_pct") or 0.0,
+        })
+
+    if not trades:
+        print("   sem trades emparelháveis com canal/origem ainda — corre um novo período.")
+        return
+
+    def _tabela(titulo, chave):
+        print(f"   » por {titulo}:")
+        print(f"   {'grupo':12} {'n':>4} {'win%':>6} {'P/L soma':>12} {'P/L med %':>10}")
+        grupos = defaultdict(list)
+        for t in trades:
+            grupos[t[chave]].append(t)
+        for nome in sorted(grupos, key=lambda k: -sum(x["pl_usd"] for x in grupos[k])):
+            n, wr, soma, medpct = _grupo_stats(grupos[nome])
+            print(f"   {nome:12} {n:>4} {wr:>5.0f}% {_eur(soma):>12} {medpct:>+9.1f}%")
+
+    _tabela("CANAL", "canal")
+    _tabela("ORIGEM", "origem")
+
+    # veredicto direto sobre o HYPE
+    hype = [t for t in trades if t["canal"] == "hype"]
+    normal = [t for t in trades if t["canal"] != "hype"]
+    print("   -----")
+    if not hype:
+        print("   👉 nenhum trade pelo canal HYPE neste período (ou estava desligado).")
+    else:
+        hn, hwr, hsoma, _ = _grupo_stats(hype)
+        nn, nwr, nsoma, _ = _grupo_stats(normal)
+        print(f"   👉 HYPE: {hn} trades, win {hwr:.0f}%, P/L {_eur(hsoma)}  |  "
+              f"NORMAL: {nn} trades, win {nwr:.0f}%, P/L {_eur(nsoma)}")
+        if hsoma < 0 and nsoma > 0:
+            print("      O canal HYPE está a PERDER enquanto o normal ganha — considera")
+            print("      desligá-lo (botão 🔥 HYPE) ou apertar os limites de hype.")
+        elif hsoma > 0 and hwr >= nwr:
+            print("      O canal HYPE está a compensar — manter ligado faz sentido.")
+        else:
+            print("      Resultado do HYPE ainda misto — deixa correr mais para decidir.")
 
 
 def _analise_por_liquidez(compras: list[dict], vendas: list[dict]):
