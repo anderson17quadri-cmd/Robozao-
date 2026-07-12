@@ -23,7 +23,7 @@ simples, sem enrolação*. Nada de camadas de IA, scores ou checklists.
 
 ### Regras de saída (o que disparar primeiro, vence)
 - **Colapso de liquidez (prioridade máxima):** se a liquidez cair
-  `LIQUIDEZ_QUEDA_VENDA_PCT%` (default 70%) desde a compra, vende **já**,
+  `LIQUIDEZ_QUEDA_VENDA_PCT%` (default 50%) desde a compra, vende **já**,
   ignorando todas as regras abaixo. Quando um pool graduado (ex: PumpSwap) tem
   a liquidez removida, o preço da AMM deixa de ser fiável — pode não haver
   ninguém do outro lado para negociar a sério. Motivo no log:

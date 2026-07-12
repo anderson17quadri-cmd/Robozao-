@@ -139,8 +139,10 @@ class Config:
     # Se a liquidez cair esta % (ou mais) desde a COMPRA, vende imediatamente,
     # independentemente do preço — o preço de uma pool quase sem liquidez não é
     # fiável (pode não haver ninguém do outro lado para vender a sério).
+    # Baixado de 70 -> 50: dados mostraram casos apanhados só a -99% (tarde
+    # demais); um limiar mais baixo corta o desastre mais cedo.
     # 0 = desligado.
-    liquidez_queda_venda_pct: float = 70.0
+    liquidez_queda_venda_pct: float = 50.0
 
     # --- Bloqueio de moedas que já rugaram (evita repetir a mesma perda) ---
     # Se um mint já fechou com prejuízo >= esta % (ou por colapso de liquidez),
@@ -224,7 +226,7 @@ def load_config() -> Config:
         acompanhar_vendidos_max=_get_int("ACOMPANHAR_VENDIDOS_MAX", 20),
         intervalo_acompanhar_vendidos_segundos=_get_int(
             "INTERVALO_ACOMPANHAR_VENDIDOS_SEGUNDOS", 60),
-        liquidez_queda_venda_pct=_get_float("LIQUIDEZ_QUEDA_VENDA_PCT", 70.0),
+        liquidez_queda_venda_pct=_get_float("LIQUIDEZ_QUEDA_VENDA_PCT", 50.0),
         blacklist_prejuizo_pct=_get_float("BLACKLIST_PREJUIZO_PCT", 50.0),
         blacklist_cooldown_horas=_get_float("BLACKLIST_COOLDOWN_HORAS", 0.0),
         telegram_bot_token=_get("TELEGRAM_BOT_TOKEN", ""),
