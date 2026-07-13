@@ -92,8 +92,11 @@ def _assinar_transacao_bruta(raw_tx: bytes, signing_key) -> bytes:
     return bytes(tx_assinada)
 
 
-def _sign_and_send(swap_tx_b64: str) -> str | None:
-    """Assina a tx com a wallet (ed25519_pure) e envia via RPC. Devolve a signature ou None."""
+def _sign_and_send(swap_tx_b64: str, skip_preflight: bool = False) -> tuple[str | None, str]:
+    """
+    Assina a tx (ed25519_pure) e envia via RPC. Devolve (signature|None, detalhe).
+    `detalhe` traz o erro real do RPC quando falha (antes era engolido).
+    """
     import base64
 
     from wallet import get_signing_key
@@ -110,17 +113,20 @@ def _sign_and_send(swap_tx_b64: str) -> str | None:
             "method": "sendTransaction",
             "params": [
                 signed_b64,
-                {"encoding": "base64", "skipPreflight": False, "maxRetries": 3},
+                {"encoding": "base64", "skipPreflight": skip_preflight, "maxRetries": 3},
             ],
         }
         rpc_limiter.acquire()
         resp = requests.post(CFG.solana_rpc_url, json=payload, timeout=_TIMEOUT)
         data = resp.json()
         if "error" in data:
-            return None
-        return data.get("result")
-    except Exception:
-        return None
+            err = data["error"]
+            msg = err.get("message") if isinstance(err, dict) else str(err)
+            return None, str(msg)[:200]
+        sig = data.get("result")
+        return (sig, "") if sig else (None, "RPC não devolveu assinatura")
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
 
 
 def swap(input_mint: str, output_mint: str, amount_lamports: int) -> dict:
@@ -145,10 +151,14 @@ def swap(input_mint: str, output_mint: str, amount_lamports: int) -> dict:
         return {"ok": False, "signature": None, "out_amount": None,
                 "motivo": "falha a construir swap tx"}
 
-    sig = _sign_and_send(swap_tx)
+    sig, detalhe = _sign_and_send(swap_tx, skip_preflight=False)
     if not sig:
-        return {"ok": False, "signature": None, "out_amount": None,
-                "motivo": "falha a assinar/enviar tx"}
+        # 2ª tentativa: salta a simulação (preflight). Às vezes a simulação
+        # falha por estado momentâneo/slippage mas a tx passaria na mesma.
+        sig, detalhe2 = _sign_and_send(swap_tx, skip_preflight=True)
+        if not sig:
+            return {"ok": False, "signature": None, "out_amount": None,
+                    "motivo": f"falha a enviar tx: {detalhe or detalhe2}"}
 
     # ESPERA a confirmação on-chain — a assinatura é devolvida ao submeter,
     # não quando executa. Só depois disto é seguro dizer que o swap resultou.
