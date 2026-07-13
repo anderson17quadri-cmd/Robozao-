@@ -248,7 +248,7 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
 def verificar_posicoes() -> None:
     """Aplica as regras de saída a cada posição aberta."""
     for pos in list(STATE.posicoes):
-        info = gecko.get_pool_info(pos["pool_address"])
+        info = gecko.get_pool_info(pos["pool_address"], pos.get("mint", ""))
         preco = info.get("price_usd") if info else None
         if preco is None or preco <= 0:
             # sem preço => não decide nada agora (não vende às cegas)
@@ -322,7 +322,7 @@ def vender_manual(pos_id: str) -> dict:
     if pos is None:
         return {"ok": False, "motivo": "posição não encontrada"}
 
-    preco = gecko.get_pool_price(pos["pool_address"])
+    preco = gecko.get_pool_price(pos["pool_address"], pos.get("mint", ""))
     if preco is None or preco <= 0:
         # sem preço fiável: em DRY_RUN caímos no preço de entrada para não falhar;
         # em real, sem preço não arriscamos — a swap decide pela cotação Jupiter.
@@ -366,7 +366,7 @@ def revisar_lista_vigia() -> None:
             watchlist.remover(mint)
             continue
 
-        info = gecko.get_pool_info(pool_address)
+        info = gecko.get_pool_info(pool_address, mint)
         if not info:
             continue   # falha de rede — tenta de novo no próximo ciclo
 
@@ -391,7 +391,7 @@ def acompanhar_vendidos() -> None:
     Reaproveita o mesmo gecko.get_pool_price das posições abertas.
     """
     for trade in STATE.trades_para_acompanhar(CFG.acompanhar_vendidos_max):
-        preco = gecko.get_pool_price(trade.get("pool_address", ""))
+        preco = gecko.get_pool_price(trade.get("pool_address", ""), trade.get("mint", ""))
         if preco is None or preco <= 0:
             continue
         STATE.atualizar_preco_vendido(trade["id"], preco)

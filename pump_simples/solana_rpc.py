@@ -199,6 +199,50 @@ def confirmar_transacao(signature: str, timeout_seg: float = 45.0) -> str:
     return "timeout"
 
 
+_TOKEN_PROGRAMS = (
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",   # SPL Token clássico
+    "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",   # Token-2022 (os "...pump")
+)
+
+
+def listar_tokens(owner_pubkey: str) -> list[dict]:
+    """
+    Lista TODOS os tokens (com saldo > 0) que a wallet detém, dos dois programas
+    de token da Solana. Cada item: {mint, amount_base, decimals, amount_humano}.
+    Devolve [] se não tiver nenhum ou se falhar.
+    """
+    if not owner_pubkey:
+        return []
+    por_mint: dict[str, dict] = {}
+    for programa in _TOKEN_PROGRAMS:
+        data, _motivo = _rpc_call("getTokenAccountsByOwner", [
+            owner_pubkey, {"programId": programa}, {"encoding": "jsonParsed"},
+        ])
+        if not data or "result" not in data:
+            continue
+        try:
+            contas = data["result"]["value"]
+        except (KeyError, TypeError):
+            continue
+        for c in contas:
+            try:
+                info = c["account"]["data"]["parsed"]["info"]
+                mint = info["mint"]
+                ta = info["tokenAmount"]
+                base = int(ta["amount"])
+                dec = int(ta["decimals"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if base <= 0:
+                continue
+            item = por_mint.setdefault(
+                mint, {"mint": mint, "amount_base": 0, "decimals": dec, "amount_humano": 0.0})
+            item["amount_base"] += base
+            item["decimals"] = dec
+            item["amount_humano"] = item["amount_base"] / (10 ** dec) if dec is not None else 0.0
+    return list(por_mint.values())
+
+
 def get_token_account_info(owner_pubkey: str, mint: str) -> dict | None:
     """
     Saldo REAL na wallet de um token específico, via getTokenAccountsByOwner

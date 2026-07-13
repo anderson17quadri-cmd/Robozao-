@@ -126,15 +126,39 @@ def get_new_pump_pools() -> list[dict]:
     return pools
 
 
-def get_pool_price(pool_address: str) -> float | None:
-    """Preço atual (USD) do base token de um pool. None em caso de falha."""
+def _mint_do_rel(rel: dict, lado: str) -> str:
+    """Extrai o mint do token 'base' ou 'quote' das relationships (id vem
+    como 'solana_<mint>')."""
+    tok_id = ((rel.get(lado, {}) or {}).get("data", {}) or {}).get("id", "") or ""
+    return tok_id.split("_", 1)[1] if "_" in tok_id else tok_id
+
+
+def _preco_do_mint(attrs: dict, rel: dict, mint_esperado: str = "") -> float | None:
+    """
+    Preço USD do token `mint_esperado` NESTE pool — seja ele o base OU o quote.
+    O código antigo lia sempre base_token_price_usd, o que dava o preço do
+    token ERRADO quando o nosso token é o quote do pool (ou quando a
+    GeckoTerminal troca base/quote ao longo do tempo, ex: ao graduar). Sem
+    mint, mantém o comportamento antigo (assume base).
+    """
+    if mint_esperado:
+        base_mint = _mint_do_rel(rel, "base_token")
+        quote_mint = _mint_do_rel(rel, "quote_token")
+        if quote_mint == mint_esperado and base_mint != mint_esperado:
+            return _f(attrs.get("quote_token_price_usd"))
+    return _f(attrs.get("base_token_price_usd"))
+
+
+def get_pool_price(pool_address: str, mint_esperado: str = "") -> float | None:
+    """Preço atual (USD) do nosso token num pool. None em caso de falha."""
     if not pool_address:
         return None
     data = _get_json(f"{CFG.gecko_api_base}/networks/solana/pools/{pool_address}")
     if not data or "data" not in data:
         return None
     attrs = (data.get("data", {}) or {}).get("attributes", {}) or {}
-    return _f(attrs.get("base_token_price_usd"))
+    rel = (data.get("data", {}) or {}).get("relationships", {}) or {}
+    return _preco_do_mint(attrs, rel, mint_esperado)
 
 
 def verificar_pool(pool_address: str, mint_esperado: str = "", tentativas: int = 3) -> dict:
@@ -207,11 +231,12 @@ def verificar_pool(pool_address: str, mint_esperado: str = "", tentativas: int =
     return resultado
 
 
-def get_pool_info(pool_address: str) -> dict | None:
+def get_pool_info(pool_address: str, mint_esperado: str = "") -> dict | None:
     """
     Info atual e completa de um pool (preço, liquidez, hype) numa só chamada.
-    Usado pela lista de vigia para reavaliar um candidato sem depender de ele
-    ainda aparecer no feed new_pools (que só mostra os mais recentes).
+    `mint_esperado`: garante que o preço devolvido é o do NOSSO token (base ou
+    quote do pool) — sem isto, lia sempre o base e dava o preço errado quando o
+    nosso token é o quote (bug do "+52000000%").
     """
     if not pool_address:
         return None
@@ -222,7 +247,7 @@ def get_pool_info(pool_address: str) -> dict | None:
     rel = (data.get("data", {}) or {}).get("relationships", {}) or {}
     dex_id = ((rel.get("dex", {}) or {}).get("data", {}) or {}).get("id", "")
     return {
-        "price_usd": _f(attrs.get("base_token_price_usd")),
+        "price_usd": _preco_do_mint(attrs, rel, mint_esperado),
         "liquidity_usd": _f(attrs.get("reserve_in_usd")) or 0.0,
         "dex": dex_id,
         **_metricas_hype(attrs),
