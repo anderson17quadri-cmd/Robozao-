@@ -196,22 +196,28 @@
       mb.textContent = real ? "⚠️ REAL" : "🧪 DEMO";
     }
 
-    // saldo real da wallet (só aparece quando o modo real está armado)
-    const kpiWalletCard = $("kpiWalletCard");
-    if (kpiWalletCard) {
-      kpiWalletCard.classList.toggle("hidden", !real);
-      if (real) {
-        const sol = state.saldo_real_sol;
-        const usd = state.saldo_real_usd;
-        const txt = (sol === null || sol === undefined)
-          ? "—"
-          : `${Number(sol).toFixed(4)} SOL` + (usd !== null && usd !== undefined ? ` (~$${Number(usd).toFixed(2)})` : "");
-        $("kpiWalletSaldo").textContent = txt;
-      }
+    // Saldo principal: em REAL mostra a WALLET a sério (SOL/$), não o €1000
+    // virtual (que só faz sentido na simulação). Em DEMO mostra o virtual.
+    const lblSaldo = $("kpiSaldoLabel"), lblTotal = $("kpiTotalLabel");
+    const cardSaldo = $("kpiSaldo").parentElement, cardTotal = $("kpiTotal").parentElement;
+    if (real) {
+      const sol = state.saldo_real_sol, usd = state.saldo_real_usd;
+      if (lblSaldo) lblSaldo.textContent = "saldo wallet (real)";
+      if (lblTotal) lblTotal.textContent = "≈ em $";
+      $("kpiSaldo").textContent = (sol === null || sol === undefined)
+        ? "—" : `${Number(sol).toFixed(4)} SOL`;
+      $("kpiTotal").textContent = (usd === null || usd === undefined)
+        ? "—" : `~$${Number(usd).toFixed(2)}`;
+      cardSaldo && cardSaldo.classList.add("kpi-real");
+      cardTotal && cardTotal.classList.add("kpi-real");
+    } else {
+      if (lblSaldo) lblSaldo.textContent = "saldo";
+      if (lblTotal) lblTotal.textContent = "valor total";
+      $("kpiSaldo").textContent = fmtUsd(state.saldo_usd);
+      $("kpiTotal").textContent = fmtUsd(state.valor_total_usd);
+      cardSaldo && cardSaldo.classList.remove("kpi-real");
+      cardTotal && cardTotal.classList.remove("kpi-real");
     }
-
-    $("kpiSaldo").textContent = fmtUsd(state.saldo_usd);
-    $("kpiTotal").textContent = fmtUsd(state.valor_total_usd);
     const plA = $("kpiPlAberto");
     plA.textContent = fmtUsd(state.pl_aberto_usd);
     plA.className = "kpi-val " + signClass(state.pl_aberto_usd);

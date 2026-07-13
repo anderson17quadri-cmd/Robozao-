@@ -168,6 +168,37 @@ def get_top_holder_concentration(mint: str) -> dict:
     return resultado
 
 
+def confirmar_transacao(signature: str, timeout_seg: float = 45.0) -> str:
+    """
+    Espera uma transação confirmar on-chain. O sendTransaction devolve a
+    assinatura logo ao SUBMETER — não quando executa. Sem esperar aqui, o
+    resto do código podia ler o saldo cedo demais e achar que a compra falhou.
+
+    Devolve:
+      "confirmada" | "falhou" (erro on-chain) | "timeout" (não confirmou a tempo).
+    """
+    import time as _time
+    if not signature:
+        return "falhou"
+    fim = _time.time() + timeout_seg
+    while _time.time() < fim:
+        data, _motivo = _rpc_call(
+            "getSignatureStatuses",
+            [[signature], {"searchTransactionHistory": True}],
+        )
+        try:
+            estado = data["result"]["value"][0]
+        except (KeyError, TypeError, IndexError):
+            estado = None
+        if estado is not None:
+            if estado.get("err") is not None:
+                return "falhou"
+            if estado.get("confirmationStatus") in ("confirmed", "finalized"):
+                return "confirmada"
+        _time.sleep(2)
+    return "timeout"
+
+
 def get_token_account_info(owner_pubkey: str, mint: str) -> dict | None:
     """
     Saldo REAL na wallet de um token específico, via getTokenAccountsByOwner
