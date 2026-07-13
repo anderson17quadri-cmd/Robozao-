@@ -178,31 +178,35 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
                       motivo=res["motivo"], modo="REAL")
             return
 
-        # NUNCA confia em nenhuma estimativa local para o nº de tokens: pergunta
-        # à própria wallet quanto REALMENTE recebeu (decimais corretos, valor
-        # exato). É isto que a venda vai usar depois — se aqui ficar errado,
-        # a venda também fica (era o bug: guardava uma estimativa em "unidades
-        # humanas" e a venda tentava usá-la como se fossem unidades base).
-        tokens_humanos = None
+        # CONFIRMA na blockchain que a compra resultou mesmo em tokens. Uma
+        # tx pode ser enviada (e devolver assinatura) mas FALHAR on-chain —
+        # nesse caso a wallet fica com 0 tokens. Nunca abre uma posição
+        # "fantasma" sem token real por trás.
         pubkey = get_public_key()
-        if pubkey:
-            info_saldo = solana_rpc.get_token_account_info(pubkey, mint)
-            if info_saldo and info_saldo["amount_humano"] > 0:
-                tokens_humanos = info_saldo["amount_humano"]
-        entry_price_real = preco
-        if tokens_humanos:
-            # preço médio REAL pago (incorpora o slippage/impacto que houve
-            # de verdade on-chain) — mantém a posição consistente: valor
-            # investido == tokens * entry_price no momento da compra.
+        info_saldo = solana_rpc.get_token_account_info(pubkey, mint) if pubkey else None
+
+        if info_saldo is not None and info_saldo["amount_humano"] <= 0:
+            # zero CONFIRMADO — o swap não resultou em tokens (tx falhou on-chain
+            # apesar de submetida). NÃO abre posição, NÃO mexe no saldo.
+            log_event(CFG.log_file, "compra_falhou", mint=mint, name=nome, modo="REAL",
+                      motivo="swap enviado mas 0 tokens na wallet (tx provavelmente falhou)",
+                      signature=res.get("signature"))
+            return
+
+        if info_saldo is not None:
+            # tokens REAIS recebidos (decimais corretos). Preço médio real pago
+            # => mantém a posição consistente: amount_usd == tokens*entry_price.
+            tokens_humanos = info_saldo["amount_humano"]
             entry_price_real = amount_usd / tokens_humanos
         else:
-            # fallback só se a consulta à wallet falhar (RPC em baixo mesmo
-            # depois do swap ter sido enviado) — regista para se ver no log
-            # que esta posição ficou com uma estimativa, não o valor real.
+            # saldo DESCONHECIDO (RPC falhou depois do swap). A tx pode ter
+            # passado — abre com estimativa mas regista aviso para verificares.
             tokens_humanos = amount_usd / preco if preco else 0.0
+            entry_price_real = preco
             log_event(CFG.log_file, "aviso", mint=mint, name=nome,
                       motivo="nao_confirmou_saldo_pos_compra_real",
-                      detalhe="tokens estimados, não lidos da wallet")
+                      detalhe="tokens estimados, não lidos da wallet",
+                      signature=res.get("signature"))
 
         pos = STATE.abrir_posicao(mint=mint, pool_address=pool["pool_address"],
                                   name=nome, entry_price=entry_price_real,

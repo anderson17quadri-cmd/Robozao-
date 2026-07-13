@@ -175,9 +175,16 @@ def get_token_account_info(owner_pubkey: str, mint: str) -> dict | None:
     (que podem desviar por causa de decimais, slippage, ou qualquer coisa
     externa à wallet). Soma todas as contas desse mint (normalmente só há uma).
 
-    Devolve {"amount_base": int, "decimals": int, "amount_humano": float} ou
-    None se falhar / não encontrar (fail-closed: quem chama decide o que fazer
-    — nunca inventa um valor).
+    Devolve:
+      - dict {"amount_base": int, "decimals": int|None, "amount_humano": float}
+        quando conseguiu LER a wallet. amount_base=0 é um ZERO CONFIRMADO
+        (a wallet respondeu e não tem este token) — distinto de "não consegui
+        verificar".
+      - None SÓ quando a chamada falhou mesmo (RPC em baixo, resposta
+        malformada) e portanto o saldo é DESCONHECIDO.
+    Esta distinção é importante: quem compra usa-a para separar "a tx falhou,
+    recebi 0 tokens" (zero confirmado -> não abre posição) de "não sei, o RPC
+    falhou" (desconhecido -> fallback com aviso).
     """
     if not owner_pubkey or not mint:
         return None
@@ -194,12 +201,12 @@ def get_token_account_info(owner_pubkey: str, mint: str) -> dict | None:
             info = c["account"]["data"]["parsed"]["info"]["tokenAmount"]
             total_base += int(info["amount"])
             decimals = int(info["decimals"])
-        if decimals is None:
-            return None
-        return {"amount_base": total_base, "decimals": decimals,
-                "amount_humano": total_base / (10 ** decimals)}
     except (KeyError, TypeError, ValueError, IndexError):
         return None
+    # sem contas => zero CONFIRMADO (decimals fica None, amount_humano 0.0)
+    amount_humano = (total_base / (10 ** decimals)) if decimals is not None else 0.0
+    return {"amount_base": total_base, "decimals": decimals,
+            "amount_humano": amount_humano}
 
 
 def get_sol_balance(pubkey: str) -> float | None:
