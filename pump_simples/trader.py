@@ -330,7 +330,9 @@ def vender_manual(pos_id: str) -> dict:
     if not preco or preco <= 0:
         return {"ok": False, "motivo": "sem preço para vender"}
 
-    _executar_venda(pos, preco, "manual")
+    res = _executar_venda(pos, preco, "manual")
+    if res and not res.get("ok"):
+        return {"ok": False, "motivo": res.get("motivo", "a venda falhou")}
     return {"ok": True, "motivo": "venda manual executada"}
 
 
@@ -412,22 +414,23 @@ def _executar_venda(pos, preco, motivo, **extra_log):
         pubkey = get_public_key()
         saldo = solana_rpc.get_token_account_info(pubkey, pos["mint"]) if pubkey else None
         if not saldo or saldo["amount_base"] <= 0:
+            m = ("sem saldo deste token na wallet — provavelmente já foi vendido, "
+                 "ou o RPC não devolve as contas de tokens (a posição fica aberta)")
             log_event(CFG.log_file, "venda_falhou", mint=pos["mint"],
-                      name=pos["name"], modo="REAL",
-                      motivo="sem saldo on-chain confirmado deste token na wallet "
-                             "(fail-closed — a posição continua aberta)")
-            return
+                      name=pos["name"], modo="REAL", motivo=m)
+            return {"ok": False, "motivo": m}
 
         res = jupiter.swap(pos["mint"], SOL_MINT, saldo["amount_base"])
         if not res["ok"]:
             log_event(CFG.log_file, "venda_falhou", mint=pos["mint"],
                       name=pos["name"], motivo=res["motivo"], modo="REAL")
-            return
+            return {"ok": False, "motivo": res["motivo"]}
         fechado = STATE.fechar_posicao(pos["id"], preco_saida=preco, motivo=motivo)
         log_event(CFG.log_file, "venda", modo="REAL", mint=pos["mint"],
                   name=pos["name"], motivo=motivo, exit_price=preco,
                   pl_usd=fechado["pl_usd"], pl_pct=fechado["pl_pct"],
                   signature=res["signature"], pos_id=pos["id"], **extra_log)
+        return {"ok": True, "motivo": "ok"}
     else:
         # DRY_RUN — aplica slippage: enches a venda mais barato que a cotação.
         # Usa a liquidez ATUAL (não a da compra) — se colapsou entretanto, o
@@ -444,3 +447,4 @@ def _executar_venda(pos, preco, motivo, **extra_log):
                   preco_cotado=preco, slippage_pct=round(slip * 100, 2),
                   pl_usd=fechado["pl_usd"], pl_pct=fechado["pl_pct"],
                   pos_id=pos["id"], **extra_log)
+        return {"ok": True, "motivo": "ok"}

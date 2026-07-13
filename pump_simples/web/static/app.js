@@ -350,9 +350,18 @@
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ confirmar_real: real }),
         });
-        await r.json().catch(() => ({}));
+        const d = await r.json().catch(() => ({}));
         await poll();
-      } catch (e) { /* ignora */ }
+        // se a venda NÃO deu, mostra porquê (antes falhava em silêncio)
+        if (!r.ok || d.ok === false) {
+          const motivo = d.motivo || "erro desconhecido";
+          const extra = /rota|cota|liquidez/i.test(motivo)
+            ? " — o token não tem liquidez (rugou); não há como vender." : "";
+          showConfirm("❌ A venda não foi executada", motivo + extra, false, null);
+        }
+      } catch (e) {
+        showConfirm("❌ Erro de rede na venda", "Tenta outra vez.", false, null);
+      }
     });
   }
 
