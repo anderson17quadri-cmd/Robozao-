@@ -9,6 +9,8 @@ transações REAIS on-chain — corre isto só quando quiseres mesmo vender.
 Uso:
     python vender_token.py                 # LISTA os tokens que tens na wallet
     python vender_token.py <MINT>          # vende 100% desse token -> SOL
+    python vender_token.py <MINT> 25       # vende só 25% (útil se 100% falhar
+                                           #   com "Overflow" do pump.fun)
     python vender_token.py all             # vende TODOS os tokens -> SOL
 
 Slippage alto de propósito (para SAIR mesmo de tokens de baixa liquidez).
@@ -45,13 +47,18 @@ def listar(pub):
     print("Para vender todos: python vender_token.py all")
 
 
-def vender_um(mint: str, pub: str) -> bool:
+def vender_um(mint: str, pub: str, pct: float = 100.0) -> bool:
     info = solana_rpc.get_token_account_info(pub, mint)
     if not info or info["amount_base"] <= 0:
         print(f"   ⚠️  {mint[:8]}… — 0 tokens na wallet (nada para vender)")
         return False
-    print(f"   a vender {info['amount_humano']} de {mint[:8]}… ({info['amount_base']} base)…")
-    res = jupiter.swap(mint, SOL_MINT, info["amount_base"])
+    amount = int(info["amount_base"] * pct / 100.0)
+    if amount <= 0:
+        print("   ⚠️  quantidade a vender = 0 (percentagem baixa demais)")
+        return False
+    quanto = "100%" if pct >= 100 else f"{pct:.0f}%"
+    print(f"   a vender {quanto} de {mint[:8]}… ({amount} base)…")
+    res = jupiter.swap(mint, SOL_MINT, amount)
     if res["ok"]:
         print(f"   ✅ VENDIDO! assinatura: {res['signature']}")
         print(f"      confirma em: https://solscan.io/tx/{res['signature']}")
@@ -93,9 +100,15 @@ def main():
         print(f"\n {vendidos}/{len(tokens)} vendidos.")
         return
 
-    # vender um mint específico
+    # vender um mint específico — opcional: 2º arg = percentagem (ex: 25)
+    pct = 100.0
+    if len(sys.argv) > 2:
+        try:
+            pct = max(1.0, min(100.0, float(sys.argv[2])))
+        except ValueError:
+            pass
     print()
-    vender_um(arg, pub)
+    vender_um(arg, pub, pct)
 
 
 if __name__ == "__main__":
