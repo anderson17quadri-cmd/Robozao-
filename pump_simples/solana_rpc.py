@@ -168,6 +168,40 @@ def get_top_holder_concentration(mint: str) -> dict:
     return resultado
 
 
+def get_token_account_info(owner_pubkey: str, mint: str) -> dict | None:
+    """
+    Saldo REAL na wallet de um token específico, via getTokenAccountsByOwner
+    (jsonParsed) — a fonte da verdade para vender: nunca confia em contas locais
+    (que podem desviar por causa de decimais, slippage, ou qualquer coisa
+    externa à wallet). Soma todas as contas desse mint (normalmente só há uma).
+
+    Devolve {"amount_base": int, "decimals": int, "amount_humano": float} ou
+    None se falhar / não encontrar (fail-closed: quem chama decide o que fazer
+    — nunca inventa um valor).
+    """
+    if not owner_pubkey or not mint:
+        return None
+    data, _motivo = _rpc_call("getTokenAccountsByOwner", [
+        owner_pubkey, {"mint": mint}, {"encoding": "jsonParsed"},
+    ])
+    if not data or "result" not in data:
+        return None
+    try:
+        contas = data["result"]["value"]
+        total_base = 0
+        decimals = None
+        for c in contas:
+            info = c["account"]["data"]["parsed"]["info"]["tokenAmount"]
+            total_base += int(info["amount"])
+            decimals = int(info["decimals"])
+        if decimals is None:
+            return None
+        return {"amount_base": total_base, "decimals": decimals,
+                "amount_humano": total_base / (10 ** decimals)}
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+
+
 def get_sol_balance(pubkey: str) -> float | None:
     """Saldo em SOL da wallet (getBalance). None se falhar (RPC em baixo,
     pubkey inválida, etc.) — nunca finge um valor."""

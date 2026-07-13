@@ -17,6 +17,7 @@ Sem IA, sem score, sem checklist. No máximo 1 chamada RPC por candidato.
 import time
 
 import gecko
+import solana_rpc
 import watchlist
 from config import CFG, SOL_MINT
 from logjsonl import log_event
@@ -164,6 +165,7 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
     if CFG.envio_real_armado:
         # caminho REAL — converte USD -> lamports de SOL e faz o swap
         import jupiter
+        from wallet import get_public_key
         sol_price = gecko.get_sol_price_usd()
         if not sol_price:
             log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
@@ -175,18 +177,43 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
             log_event(CFG.log_file, "compra_falhou", mint=mint, name=nome,
                       motivo=res["motivo"], modo="REAL")
             return
-        tokens = (res["out_amount"] or 0)  # unidades base; preço médio abaixo
-        # estimativa de tokens em unidades "humanas" via preço de entrada
-        tokens_humanos = amount_usd / preco if preco else 0.0
+
+        # NUNCA confia em nenhuma estimativa local para o nº de tokens: pergunta
+        # à própria wallet quanto REALMENTE recebeu (decimais corretos, valor
+        # exato). É isto que a venda vai usar depois — se aqui ficar errado,
+        # a venda também fica (era o bug: guardava uma estimativa em "unidades
+        # humanas" e a venda tentava usá-la como se fossem unidades base).
+        tokens_humanos = None
+        pubkey = get_public_key()
+        if pubkey:
+            info_saldo = solana_rpc.get_token_account_info(pubkey, mint)
+            if info_saldo and info_saldo["amount_humano"] > 0:
+                tokens_humanos = info_saldo["amount_humano"]
+        entry_price_real = preco
+        if tokens_humanos:
+            # preço médio REAL pago (incorpora o slippage/impacto que houve
+            # de verdade on-chain) — mantém a posição consistente: valor
+            # investido == tokens * entry_price no momento da compra.
+            entry_price_real = amount_usd / tokens_humanos
+        else:
+            # fallback só se a consulta à wallet falhar (RPC em baixo mesmo
+            # depois do swap ter sido enviado) — regista para se ver no log
+            # que esta posição ficou com uma estimativa, não o valor real.
+            tokens_humanos = amount_usd / preco if preco else 0.0
+            log_event(CFG.log_file, "aviso", mint=mint, name=nome,
+                      motivo="nao_confirmou_saldo_pos_compra_real",
+                      detalhe="tokens estimados, não lidos da wallet")
+
         pos = STATE.abrir_posicao(mint=mint, pool_address=pool["pool_address"],
-                                  name=nome, entry_price=preco,
+                                  name=nome, entry_price=entry_price_real,
                                   amount_usd=amount_usd, tokens=tokens_humanos,
                                   liquidez_usd=pool.get("liquidity_usd"),
                                   buyers_h1=pool.get("buyers_h1"),
                                   volume_h1=pool.get("volume_h1"),
                                   txns_h1=pool.get("txns_h1"), canal=canal)
         log_event(CFG.log_file, "compra", modo="REAL", mint=mint, name=nome,
-                  amount_usd=amount_usd, entry_price=preco, canal=canal, origem=origem,
+                  amount_usd=amount_usd, entry_price=entry_price_real,
+                  preco_cotado=preco, canal=canal, origem=origem,
                   liquidez_usd=pool.get("liquidity_usd"), dex=pool.get("dex"),
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),
@@ -369,9 +396,25 @@ def acompanhar_vendidos() -> None:
 def _executar_venda(pos, preco, motivo, **extra_log):
     if CFG.envio_real_armado:
         import jupiter
-        # vende os tokens de volta para SOL
-        tokens_base = int(pos["tokens"])  # aproximação; ver README
-        res = jupiter.swap(pos["mint"], SOL_MINT, max(tokens_base, 1))
+        from wallet import get_public_key
+
+        # NUNCA vende uma quantidade "adivinhada" a partir do estado local —
+        # pergunta à wallet quanto REALMENTE tem deste mint agora (unidades
+        # base + decimais corretos) e vende exatamente isso. Isto corrige um
+        # bug sério: a venda usava pos["tokens"] (unidades "humanas", vindas
+        # da compra) como se já fossem unidades base, o que enviava à Jupiter
+        # uma quantidade errada por um fator de 10^decimais — a venda falhava
+        # ou vendia uma fração ínfima, deixando a posição real presa.
+        pubkey = get_public_key()
+        saldo = solana_rpc.get_token_account_info(pubkey, pos["mint"]) if pubkey else None
+        if not saldo or saldo["amount_base"] <= 0:
+            log_event(CFG.log_file, "venda_falhou", mint=pos["mint"],
+                      name=pos["name"], modo="REAL",
+                      motivo="sem saldo on-chain confirmado deste token na wallet "
+                             "(fail-closed — a posição continua aberta)")
+            return
+
+        res = jupiter.swap(pos["mint"], SOL_MINT, saldo["amount_base"])
         if not res["ok"]:
             log_event(CFG.log_file, "venda_falhou", mint=pos["mint"],
                       name=pos["name"], motivo=res["motivo"], modo="REAL")
