@@ -163,13 +163,13 @@ def swap(input_mint: str, output_mint: str, amount_lamports: int) -> dict:
     # ESPERA a confirmação on-chain — a assinatura é devolvida ao submeter,
     # não quando executa. Só depois disto é seguro dizer que o swap resultou.
     from solana_rpc import confirmar_transacao
-    estado = confirmar_transacao(sig)
+    estado, detalhe = confirmar_transacao(sig)
     if estado == "falhou":
         return {"ok": False, "signature": sig, "out_amount": None,
-                "motivo": "tx falhou on-chain (rejeitada/sem execução)"}
+                "motivo": f"tx falhou on-chain: {detalhe} | ver https://solscan.io/tx/{sig}"}
     if estado == "timeout":
         return {"ok": False, "signature": sig, "out_amount": None,
-                "motivo": "tx não confirmou a tempo — verifica na wallet antes de repetir"}
+                "motivo": f"não confirmou a tempo — vê https://solscan.io/tx/{sig}"}
 
     out_amount = None
     try:

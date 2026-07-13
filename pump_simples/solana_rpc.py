@@ -174,12 +174,13 @@ def confirmar_transacao(signature: str, timeout_seg: float = 45.0) -> str:
     assinatura logo ao SUBMETER — não quando executa. Sem esperar aqui, o
     resto do código podia ler o saldo cedo demais e achar que a compra falhou.
 
-    Devolve:
-      "confirmada" | "falhou" (erro on-chain) | "timeout" (não confirmou a tempo).
+    Devolve (estado, detalhe):
+      estado = "confirmada" | "falhou" | "timeout"
+      detalhe = descrição do erro on-chain quando falhou (senão "").
     """
     import time as _time
     if not signature:
-        return "falhou"
+        return "falhou", "sem assinatura"
     fim = _time.time() + timeout_seg
     while _time.time() < fim:
         data, _motivo = _rpc_call(
@@ -192,11 +193,11 @@ def confirmar_transacao(signature: str, timeout_seg: float = 45.0) -> str:
             estado = None
         if estado is not None:
             if estado.get("err") is not None:
-                return "falhou"
+                return "falhou", str(estado["err"])[:180]
             if estado.get("confirmationStatus") in ("confirmed", "finalized"):
-                return "confirmada"
+                return "confirmada", ""
         _time.sleep(2)
-    return "timeout"
+    return "timeout", ""
 
 
 _TOKEN_PROGRAMS = (

@@ -21,9 +21,10 @@ import solana_rpc
 import jupiter
 from wallet import get_public_key
 
-# tolerância de slippage alta para GARANTIR a saída (mesmo perdendo um pouco no
-# preço) — é uma venda de emergência, o objetivo é sair, não otimizar.
-SLIPPAGE_SAIDA_BPS = 2500  # 25%
+# tolerância de slippage MUITO alta para GARANTIR a saída (mesmo perdendo no
+# preço) — é uma venda de emergência, o objetivo é sair, não otimizar. Tokens
+# finos mexem-se depressa; com pouca tolerância a tx é rejeitada on-chain.
+SLIPPAGE_SAIDA_BPS = 5000  # 50%
 
 
 def _tabela(tokens):
