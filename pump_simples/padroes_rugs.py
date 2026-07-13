@@ -26,10 +26,10 @@ BASE = Path(__file__).resolve().parent
 PUMP_SUPPLY = 1_000_000_000  # supply típica pump.fun (mcap ≈ preço * supply)
 
 
-def _carregar_trades() -> list[dict]:
+def _carregar_trades(log_path: Path | None = None) -> list[dict]:
     """Junta cada compra à sua venda pelo pos_id. Devolve trades com as
     features da compra + o resultado/tempo da venda."""
-    log = BASE / "decisions.jsonl"
+    log = log_path or (BASE / "decisions.jsonl")
     if not log.exists():
         return []
     compras, vendas = {}, {}
@@ -131,12 +131,15 @@ def _cmp_cat(rot, rugs, naos, chave):
 
 
 def main():
-    trades = _carregar_trades()
+    log_path = Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    trades = _carregar_trades(log_path)
     print("=" * 68)
     print(" PADRÕES DOS RUGS — o que têm em comum, e o que dá p/ saber antes")
+    if log_path:
+        print(f" (log: {log_path.name})")
     print("=" * 68)
     if not trades:
-        print("\n⚠️  Sem trades emparelháveis no decisions.jsonl ainda.\n")
+        print("\n⚠️  Sem trades emparelháveis no log ainda.\n")
         return
 
     rugs = [t for t in trades if _e_rug(t)]
@@ -174,8 +177,28 @@ def main():
     if any(t.get("dex") for t in trades):
         _cmp_cat("por DEX (curva pump-fun vs graduado)", rugs, naos, "dex")
 
-    # ---- C) teto de market cap (se o mcap separa, onde pôr o corte?) ----
+    # ---- C0) desempenho por FAIXA de mcap (é o mínimo bom? e o teto?) ----
     com_mcap = [t for t in trades if t.get("mcap")]
+    if com_mcap:
+        print("\n" + "-" * 68)
+        print("C0) DESEMPENHO POR FAIXA DE MARKET CAP (o mínimo E o teto de uma vez)")
+        print(f"   {'faixa mcap':>14} {'trades':>7} {'win%':>6} {'P/L soma':>12} {'% rugs':>7}")
+        faixas = [(0, 5000, "< $5k"), (5000, 10000, "$5k–10k"),
+                  (10000, 20000, "$10k–20k"), (20000, 30000, "$20k–30k"),
+                  (30000, 40000, "$30k–40k"), (40000, 60000, "$40k–60k"),
+                  (60000, 1e12, "> $60k")]
+        for lo, hi, rot in faixas:
+            g = [t for t in com_mcap if lo <= t["mcap"] < hi]
+            if not g:
+                continue
+            win = sum(1 for t in g if t["pl_usd"] > 0) / len(g) * 100
+            soma = sum(t["pl_usd"] for t in g)
+            pct_rug = sum(1 for t in g if _e_rug(t)) / len(g) * 100
+            print(f"   {rot:>14} {len(g):>7} {win:>5.0f}% {_eur(soma):>12} {pct_rug:>6.0f}%")
+        print("   -> vê as faixas ABAIXO de $10k: se ganham, o mínimo está a")
+        print("      cortar moedas boas; se perdem, o mínimo faz sentido.")
+
+    # ---- C) teto de market cap (se o mcap separa, onde pôr o corte?) ----
     if com_mcap:
         print("\n" + "-" * 68)
         print("C) TETO DE MARKET CAP — e se NÃO comprasses acima de X?")
