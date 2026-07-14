@@ -145,6 +145,37 @@ def avaliar_e_comprar(pool: dict) -> None:
                   confirmado=seg["confirmado"])
         return
 
+    # --- Regra 5: liquidez NÃO pode estar a drenar AGORA (anti rug-em-curso) ---
+    # Os dados do feed podem ter segundos de idade. Relê o pool fresco no
+    # momento da compra: se a liquidez caiu forte desde a leitura do feed, é
+    # provável que estejamos a comprar A MEIO de um rug (o dev a esvaziar a
+    # pool). Falha de rede aqui NÃO bloqueia (o filtro é anti-dreno, não
+    # fail-closed — a segurança dura é a Regra 2).
+    fresco = gecko.get_pool_info(pool.get("pool_address", ""), mint)
+    liq_fresca = fresco.get("liquidity_usd") if fresco else None
+    if liq_fresca is not None and liquidez > 0:
+        delta_pct = (liq_fresca / liquidez - 1.0) * 100.0
+        if liq_fresca < liquidez * 0.70:   # caiu >30% em segundos => dreno
+            log_event(CFG.log_file, "rejeicao", mint=mint, name=nome,
+                      motivo="liquidez_a_cair", liquidez_feed=liquidez,
+                      liquidez_fresca=liq_fresca, delta_pct=round(delta_pct, 1))
+            return
+        # usa os dados FRESCOS na compra (preço/liquidez mais atuais)
+        pool = {**pool, "liquidity_usd": liq_fresca,
+                "price_usd": fresco.get("price_usd") or preco,
+                "buys_m5": fresco.get("buys_m5", pool.get("buys_m5")),
+                "sells_m5": fresco.get("sells_m5", pool.get("sells_m5")),
+                "buys_h1": fresco.get("buys_h1", pool.get("buys_h1")),
+                "sells_h1": fresco.get("sells_h1", pool.get("sells_h1"))}
+        preco = pool["price_usd"] or preco
+
+    # --- Sinal SOMBRA: concentração de holders (não filtra — só regista) ---
+    # Baleias/dev com fatia grande fora da curva podem despejar (rug). Ainda
+    # não sabemos o corte certo, por isso REGISTA-SE em cada compra e o
+    # diagnostico mede depois se separa rugs de vencedores. 1 chamada RPC por
+    # compra (compras são raras) — só vira filtro se os dados o justificarem.
+    conc = solana_rpc.get_top_holder_concentration(mint)
+
     # --- Passou tudo => COMPRA ---
     # valor de entrada editável no dashboard (STATE.max_trade_usd), limitado ao saldo
     amount_usd = min(STATE.max_trade_usd, STATE.saldo_usd)
@@ -154,13 +185,27 @@ def avaliar_e_comprar(pool: dict) -> None:
         return
 
     origem = pool.get("origem", "scan")
-    _executar_compra(pool, amount_usd, preco, seg, canal, origem)
+    _executar_compra(pool, amount_usd, preco, seg, canal, origem, conc)
     watchlist.remover(mint)   # comprado — sai da vigia (no-op se não estava lá)
 
 
-def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"):
+def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan",
+                     conc=None):
     mint = pool["mint"]
     nome = pool.get("name", "?")
+
+    # sinais SOMBRA anti-rug, gravados em cada compra (o diagnostico mede
+    # depois se separam rugs de vencedores — só aí viram filtro):
+    #   - concentração de holders (maior conta = curva; top2-10 = baleias/dev)
+    #   - pressão de venda nos primeiros minutos (sells vs buys)
+    sombra = {
+        "maior_holder_pct": (conc or {}).get("maior_holder_pct"),
+        "top2_10_pct": (conc or {}).get("top2_10_pct"),
+        "buys_m5": pool.get("buys_m5"),
+        "sells_m5": pool.get("sells_m5"),
+        "buys_h1": pool.get("buys_h1"),
+        "sells_h1": pool.get("sells_h1"),
+    }
 
     if CFG.envio_real_armado:
         # caminho REAL — converte USD -> lamports de SOL e faz o swap
@@ -222,7 +267,7 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),
                   signature=res["signature"], pos_id=pos["id"],
-                  seguranca=seg["motivo"])
+                  seguranca=seg["motivo"], **sombra)
     else:
         # caminho SIMULADO (DRY_RUN) — aplica slippage: enches mais caro que a cotação
         liquidez = pool.get("liquidity_usd")
@@ -242,7 +287,7 @@ def _executar_compra(pool, amount_usd, preco, seg, canal="normal", origem="scan"
                   liquidez_usd=liquidez, dex=pool.get("dex"),
                   volume_h1=pool.get("volume_h1"), buyers_h1=pool.get("buyers_h1"),
                   txns_h1=pool.get("txns_h1"),
-                  pos_id=pos["id"], seguranca=seg["motivo"])
+                  pos_id=pos["id"], seguranca=seg["motivo"], **sombra)
 
 
 def verificar_posicoes() -> None:

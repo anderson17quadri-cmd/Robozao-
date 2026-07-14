@@ -66,7 +66,8 @@ def _f(value) -> float | None:
 
 def _metricas_hype(attrs: dict) -> dict:
     """Extrai sinais de 'hype' dos atributos de um pool GeckoTerminal:
-    volume e nº de compradores na última hora + últimos 5 min."""
+    volume, compradores e COMPRAS vs VENDAS (pressão de venda — sinal de rug:
+    o dev/insiders a vender desde o início) na última hora + últimos 5 min."""
     vol = attrs.get("volume_usd", {}) or {}
     tx = attrs.get("transactions", {}) or {}
     tx_h1 = tx.get("h1", {}) or {}
@@ -77,6 +78,10 @@ def _metricas_hype(attrs: dict) -> dict:
         "buyers_h1": int(tx_h1.get("buyers") or 0),
         "buyers_m5": int(tx_m5.get("buyers") or 0),
         "txns_h1": int(tx_h1.get("buys") or 0) + int(tx_h1.get("sells") or 0),
+        "buys_m5": int(tx_m5.get("buys") or 0),
+        "sells_m5": int(tx_m5.get("sells") or 0),
+        "buys_h1": int(tx_h1.get("buys") or 0),
+        "sells_h1": int(tx_h1.get("sells") or 0),
     }
 
 

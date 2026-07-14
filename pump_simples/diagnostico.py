@@ -239,6 +239,9 @@ def main():
     # ---------- 10) DESEMPENHO POR CANAL (hype vs normal) e ORIGEM (scan vs vigia) ----------
     _analise_por_canal(compras, vendas)
 
+    # ---------- 11) SINAIS ANTI-RUG EM SOMBRA (concentração de holders / pressão de venda) ----------
+    _analise_sinais_rug(compras, vendas)
+
     print("\n" + "=" * 62)
 
 
@@ -360,6 +363,70 @@ def _analise_por_canal(compras: list[dict], vendas: list[dict]):
             print("      O canal HYPE está a compensar — manter ligado faz sentido.")
         else:
             print("      Resultado do HYPE ainda misto — deixa correr mais para decidir.")
+
+
+def _analise_sinais_rug(compras: list[dict], vendas: list[dict]):
+    """
+    Mede se os sinais anti-rug gravados em SOMBRA em cada compra (concentração
+    de holders via Helius e pressão de venda buys/sells) separam os rugs dos
+    vencedores. Responde a "dá para identificar os rugs ANTES de comprar?" —
+    se uma faixa concentrar os rugs sem apanhar os vencedores, vira filtro.
+    """
+    print("\n" + "-" * 62)
+    print("11) SINAIS ANTI-RUG (sombra) — concentração de holders / pressão de venda")
+
+    compra_por_id = {c.get("pos_id"): c for c in compras if c.get("pos_id")}
+    trades = []
+    for v in vendas:
+        c = compra_por_id.get(v.get("pos_id"))
+        if not c:
+            continue
+        pl_pct = v.get("pl_pct") or 0.0
+        rug = (v.get("motivo") == "liquidez_colapsou") or (pl_pct <= -50)
+        buys5 = c.get("buys_m5")
+        sells5 = c.get("sells_m5")
+        ratio5 = None
+        if buys5 is not None and sells5 is not None and buys5 > 0:
+            ratio5 = sells5 / buys5
+        trades.append({
+            "rug": rug,
+            "pl_usd": v.get("pl_usd") or 0.0,
+            "pl_pct": pl_pct,
+            "top2_10": c.get("top2_10_pct"),
+            "sell_ratio_m5": ratio5,
+        })
+
+    com_conc = [t for t in trades if t["top2_10"] is not None]
+    com_ratio = [t for t in trades if t["sell_ratio_m5"] is not None]
+    if not com_conc and not com_ratio:
+        print("   ainda sem sinais gravados (começam a partir desta versão).")
+        print("   Corre um novo período e volta a olhar para esta secção.")
+        return
+
+    def _tabela(rotulo, grupo, chave, faixas, fmt):
+        if not grupo:
+            print(f"   » {rotulo}: (sem dados)")
+            return
+        print(f"   » por {rotulo}:")
+        print(f"   {'faixa':14} {'n':>4} {'win%':>6} {'P/L soma':>12} {'% rugs':>7}")
+        for lo, hi, rot in faixas:
+            g = [t for t in grupo if lo <= t[chave] < hi]
+            if not g:
+                continue
+            n = len(g)
+            wins = sum(1 for t in g if t["pl_usd"] > 0)
+            soma = sum(t["pl_usd"] for t in g)
+            rugs = sum(1 for t in g if t["rug"])
+            print(f"   {rot:14} {n:>4} {wins/n*100:>5.0f}% {_eur(soma):>12} {rugs/n*100:>6.0f}%")
+
+    _tabela("CONCENTRAÇÃO top2-10 holders (%)", com_conc, "top2_10", [
+        (0, 5, "< 5%"), (5, 15, "5–15%"), (15, 30, "15–30%"),
+        (30, 50, "30–50%"), (50, 101, "50%+")], "%")
+    _tabela("PRESSÃO DE VENDA m5 (sells/buys)", com_ratio, "sell_ratio_m5", [
+        (0, 0.5, "< 0.5"), (0.5, 0.8, "0.5–0.8"), (0.8, 1.2, "0.8–1.2"),
+        (1.2, 2.0, "1.2–2.0"), (2.0, 1e9, "2.0+")], "x")
+    print("   Como ler: se os rugs se concentrarem numa faixa (ex: top2-10 50%+")
+    print("   ou sells/buys 1.2+) SEM apanhar os vencedores, essa faixa vira filtro.")
 
 
 def _analise_por_liquidez(compras: list[dict], vendas: list[dict]):
